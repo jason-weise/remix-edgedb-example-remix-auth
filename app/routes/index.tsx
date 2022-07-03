@@ -1,6 +1,6 @@
 import { Button, Flex, Heading, Image, chakra } from "@chakra-ui/react";
 
-import { useOptionalUser } from "~/utils";
+import { useOptionalUser } from "~/utils/data";
 import { ChakraRemixLink } from "~/components/factory";
 
 export default function Index() {

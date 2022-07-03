@@ -19,8 +19,9 @@ import {
 import { createUserSession, getUserId } from "~/services/session.server";
 
 import { createUser, getUserByEmail } from "~/models/user.server";
-import { validateEmail } from "~/utils";
 import { ChakraRemixLink } from "~/components/factory";
+import { validateEmail } from "~/utils/data";
+import { inputFromForm } from "~/utils/input-resolvers";
 
 export const loader: LoaderFunction = async ({ request }) => {
   const userId = await getUserId(request);
@@ -36,10 +37,7 @@ interface ActionData {
 }
 
 export const action: ActionFunction = async ({ request }) => {
-  const formData = await request.formData();
-  const email = formData.get("email");
-  const password = formData.get("password");
-  const redirectTo = formData.get("redirectTo");
+  const { email, password, redirectTo } = await inputFromForm(request);
 
   if (!validateEmail(email)) {
     return json<ActionData>(

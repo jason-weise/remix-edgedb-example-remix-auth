@@ -19,8 +19,9 @@ import {
 } from "@chakra-ui/react";
 import { createUserSession, getUserId } from "~/services/session.server";
 import { verifyLogin } from "~/models/user.server";
-import { validateEmail } from "~/utils";
+import { validateEmail } from "~/utils/data";
 import { ChakraRemixLink } from "~/components/factory";
+import { inputFromForm } from "~/utils/input-resolvers";
 
 export const loader: LoaderFunction = async ({ request }) => {
   const userId = await getUserId(request);
@@ -36,11 +37,9 @@ interface ActionData {
 }
 
 export const action: ActionFunction = async ({ request }) => {
-  const formData = await request.formData();
-  const email = formData.get("email");
-  const password = formData.get("password");
-  const redirectTo = formData.get("redirectTo");
-  const remember = formData.get("remember");
+  const { email, password, redirectTo, remember } = await inputFromForm(
+    request
+  );
 
   if (!validateEmail(email)) {
     return json<ActionData>(

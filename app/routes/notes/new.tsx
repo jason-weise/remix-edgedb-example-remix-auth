@@ -13,6 +13,7 @@ import * as React from "react";
 
 import { createNote } from "~/models/note.server";
 import { requireUserId } from "~/services/session.server";
+import { inputFromForm } from "~/utils/input-resolvers";
 
 type ActionData = {
   errors?: {
@@ -24,9 +25,7 @@ type ActionData = {
 export const action: ActionFunction = async ({ request }) => {
   const userId = await requireUserId(request);
 
-  const formData = await request.formData();
-  const title = formData.get("title");
-  const body = formData.get("body");
+  const { title, body } = await inputFromForm(request);
 
   if (typeof title !== "string" || title.length === 0) {
     return json<ActionData>(
