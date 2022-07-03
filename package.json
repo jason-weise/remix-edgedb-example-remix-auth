@@ -14,7 +14,7 @@
     "dev:remix": "cross-env NODE_ENV=development remix watch",
     "docker": "docker-compose up -d",
     "format": "prettier --write .",
-    "gen:theme-typings": "chakra-cli tokens ./theme/index.ts",
+    "gen:theme-typings": "chakra-cli tokens ./app/theme/index.ts",
     "lint": "eslint --cache --cache-location ./node_modules/.cache/eslint .",
     "postinstall": "npm run gen:theme-typings",
     "setup": "prisma migrate dev && prisma db seed",

@@ -16,7 +16,7 @@ import React, { useContext, useEffect } from "react";
 import { withEmotionCache } from "@emotion/react";
 import { ChakraProvider } from "@chakra-ui/react";
 
-import theme from "theme";
+import theme from "./theme";
 import { ClientStyleContext, ServerStyleContext } from "./context";
 import { getUser } from "./services/session.server";
 
