@@ -6,9 +6,6 @@ import { client, e } from "~/db";
 export async function getUserById(id: DBKey<typeof e.User.id>) {
   const query = e.select(e.User, (user) => ({
     ...e.User["*"],
-    password: {
-      ...e.Password["*"],
-    },
     filter: e.op(user.id, "=", e.uuid(id)),
   }));
 
@@ -34,20 +31,38 @@ export async function createUser(
 ) {
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  const query = e.insert(e.User, {
+  const userMutation = e.insert(e.User, {
     email,
-    password: e.insert(e.Password, {
-      hash: hashedPassword,
-    }),
   });
 
-  const res = await query.run(client);
+  const passwordMutation = e.insert(e.Password, {
+    hash: hashedPassword,
+    user: userMutation,
+  });
 
-  return res;
+  const createdUser = await e
+    .select(passwordMutation, () => ({
+      id: true,
+      user: { ...e.User["*"] },
+    }))
+    .run(client);
+
+  return createdUser.user;
 }
 
 export async function deleteUserByEmail(email: DBKey<typeof e.User.id>) {
-  const query = e.delete(e.User, (user) => ({
+  const deleteMutation = e.delete(e.User, (user) => ({
+    filter: e.op(user.email, "=", email),
+  }));
+
+  return await deleteMutation.run(client);
+}
+
+export async function verifyLogin(
+  email: DBKey<typeof e.User.id>,
+  password: DBKey<typeof e.Password.hash>
+) {
+  const query = e.select(e.User, (user) => ({
     ...e.User["*"],
     password: {
       ...e.Password["*"],
@@ -55,16 +70,9 @@ export async function deleteUserByEmail(email: DBKey<typeof e.User.id>) {
     filter: e.op(user.email, "=", email),
   }));
 
-  return await query.run(client);
-}
+  const userWithPassword = await query.run(client);
 
-export async function verifyLogin(
-  email: DBKey<typeof e.User.id>,
-  password: DBKey<typeof e.Password.hash>
-) {
-  const userWithPassword = await getUserByEmail(email);
-
-  if (!userWithPassword || !userWithPassword.password) {
+  if (!userWithPassword?.password) {
     return null;
   }
 

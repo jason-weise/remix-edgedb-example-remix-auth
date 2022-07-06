@@ -1,4 +1,4 @@
-CREATE MIGRATION m1rbp72aqv7hwbm4n7cn6q3qogo7rvmqgtttyn4b42kbgumez3cbaq
+CREATE MIGRATION m1cvgopa2b45wko34sahth56bz73wqxv4wjtsyv4new5oi6mdiyapq
     ONTO initial
 {
   CREATE TYPE default::Note {
@@ -19,20 +19,21 @@ CREATE MIGRATION m1rbp72aqv7hwbm4n7cn6q3qogo7rvmqgtttyn4b42kbgumez3cbaq
       CREATE PROPERTY updated_at -> std::datetime;
   };
   ALTER TYPE default::Note {
-      CREATE LINK user -> default::User;
+      CREATE REQUIRED LINK user -> default::User {
+          ON TARGET DELETE  DELETE SOURCE;
+      };
   };
   ALTER TYPE default::User {
       CREATE MULTI LINK notes := (.<user[IS default::Note]);
   };
   CREATE TYPE default::Password {
+      CREATE REQUIRED LINK user -> default::User {
+          ON TARGET DELETE  DELETE SOURCE;
+          CREATE CONSTRAINT std::exclusive;
+      };
       CREATE REQUIRED PROPERTY hash -> std::str;
   };
   ALTER TYPE default::User {
-      CREATE LINK password -> default::Password {
-          CREATE CONSTRAINT std::exclusive;
-      };
-  };
-  ALTER TYPE default::Password {
-      CREATE LINK user := (.<password[IS default::User]);
+      CREATE LINK password := (.<user[IS default::Password]);
   };
 };

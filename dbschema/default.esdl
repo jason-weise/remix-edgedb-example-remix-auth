@@ -1,8 +1,26 @@
 module default {
 
+ type User {
+    required property email -> str {
+        constraint exclusive;
+    }
+
+    required property created_at -> datetime {
+        default := datetime_current();
+    }
+    property updated_at -> datetime;
+
+    link password := .<user[is Password];
+    multi link notes := .<user[is Note];
+
+  }
+
   type Password {
     required property hash -> str;
-    link user := .<password[is User];
+    required link user -> User {
+      constraint exclusive;  # one-to-one
+      on target delete delete source;
+    }
 
   }
 
@@ -15,23 +33,10 @@ module default {
     };
     property updated_at -> datetime;
 
-    link user -> User;
+    required link user -> User {
+      on target delete delete source;
+    }
   }
 
-   type User {
-    required property email -> str {
-        constraint exclusive;
-    }
-
-    required property created_at -> datetime {
-        default := datetime_current();
-    }
-    property updated_at -> datetime;
-
-    link password -> Password {
-        constraint exclusive;
-    };
-    multi link notes := .<user[is Note];
-
-  }
+  
 }
