@@ -67,6 +67,9 @@ export default function Index() {
               >
                 Check the README.md file for instructions on how to get this
                 project deployed.
+                <br />
+                //TODO Implement Triggers to update `updated_at` when a field is
+                updated. Roadmap here: https://www.edgedb.com/roadmap#data-model
               </chakra.p>
               <chakra.div
                 mx="auto"
@@ -129,9 +132,9 @@ export default function Index() {
                 href: "https://www.postgresql.org/",
               },
               {
-                src: "https://user-images.githubusercontent.com/1500684/157764484-ad64a21a-d7fb-47e3-8669-ec046da20c1f.svg",
-                alt: "Prisma",
-                href: "https://prisma.io",
+                src: "https://pbs.twimg.com/profile_images/1499837137339891715/30EyQj2H_400x400.png",
+                alt: "EdgeDB",
+                href: "https://www.edgedb.com/",
               },
               {
                 src: "https://user-images.githubusercontent.com/1500684/157764276-a516a239-e377-4a20-b44a-0ac7b65c8c14.svg",

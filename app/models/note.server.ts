@@ -1,26 +1,39 @@
 import type { Note, User } from "@prisma/client";
 
-import { prisma } from "~/db.server";
-
+import type { DBKey } from "~/db";
+import { client, e } from "~/db";
 export type { Note } from "@prisma/client";
 
 export function getNote({
   id,
   userId,
-}: Pick<Note, "id"> & {
-  userId: User["id"];
+}: {
+  id: DBKey<typeof e.Note.id>;
+  userId: DBKey<typeof e.User.id>;
 }) {
-  return prisma.note.findFirst({
-    where: { id, userId },
-  });
+  return e
+    .select(e.Note, (note) => ({
+      ...e.Note["*"],
+      filter: e.op(
+        e.op(note.user.id, "=", e.uuid(userId)),
+        "and",
+        e.op(note.id, "=", e.uuid(id))
+      ),
+      limit: 1,
+    }))
+    .assert_single()
+    .run(client);
 }
 
 export function getNoteListItems({ userId }: { userId: User["id"] }) {
-  return prisma.note.findMany({
-    where: { userId },
-    select: { id: true, title: true },
-    orderBy: { updatedAt: "desc" },
-  });
+  return e
+    .select(e.Note, (note) => ({
+      id: true,
+      title: true,
+      filter: e.op(note.user.id, "=", e.uuid(userId)),
+      order_by: note.updated_at,
+    }))
+    .run(client);
 }
 
 export function createNote({
@@ -30,24 +43,28 @@ export function createNote({
 }: Pick<Note, "body" | "title"> & {
   userId: User["id"];
 }) {
-  return prisma.note.create({
-    data: {
+  return e
+    .insert(e.Note, {
       title,
       body,
-      user: {
-        connect: {
-          id: userId,
-        },
-      },
-    },
-  });
+      user: e.select(e.User, (user) => ({
+        filter: e.op(user.id, "=", e.uuid(userId)),
+      })),
+    })
+    .run(client);
 }
 
 export function deleteNote({
   id,
   userId,
 }: Pick<Note, "id"> & { userId: User["id"] }) {
-  return prisma.note.deleteMany({
-    where: { id, userId },
-  });
+  return e
+    .delete(e.Note, (note) => ({
+      filter: e.op(
+        e.op(note.user.id, "=", e.uuid(userId)),
+        "and",
+        e.op(note.id, "=", e.uuid(id))
+      ),
+    }))
+    .run(client);
 }

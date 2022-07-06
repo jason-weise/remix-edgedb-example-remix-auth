@@ -1,47 +1,68 @@
 import type { Password, User } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
-import { prisma } from "~/db.server";
+import type { DBKey } from "~/db";
+import { client, e } from "~/db";
 
 export type { User } from "@prisma/client";
 
-export async function getUserById(id: User["id"]) {
-  return prisma.user.findUnique({ where: { id } });
+export async function getUserById(id: DBKey<typeof e.User.id>) {
+  const query = e.select(e.User, (user) => ({
+    ...e.User["*"],
+    password: {
+      ...e.Password["*"],
+    },
+    filter: e.op(user.id, "=", e.uuid(id)),
+  }));
+
+  const user = await query.run(client);
+  return user;
 }
 
 export async function getUserByEmail(email: User["email"]) {
-  return prisma.user.findUnique({ where: { email } });
+  const query = e.select(e.User, (user) => ({
+    ...e.User["*"],
+    password: {
+      ...e.Password["*"],
+    },
+    filter: e.op(user.email, "=", email),
+  }));
+
+  return await query.run(client);
 }
 
 export async function createUser(email: User["email"], password: string) {
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  return prisma.user.create({
-    data: {
-      email,
-      password: {
-        create: {
-          hash: hashedPassword,
-        },
-      },
-    },
+  const query = e.insert(e.User, {
+    email,
+    password: e.insert(e.Password, {
+      hash: hashedPassword,
+    }),
   });
+
+  const res = await query.run(client);
+
+  return res;
 }
 
 export async function deleteUserByEmail(email: User["email"]) {
-  return prisma.user.delete({ where: { email } });
+  const query = e.delete(e.User, (user) => ({
+    ...e.User["*"],
+    password: {
+      ...e.Password["*"],
+    },
+    filter: e.op(user.email, "=", email),
+  }));
+
+  return await query.run(client);
 }
 
 export async function verifyLogin(
   email: User["email"],
   password: Password["hash"]
 ) {
-  const userWithPassword = await prisma.user.findUnique({
-    where: { email },
-    include: {
-      password: true,
-    },
-  });
+  const userWithPassword = await getUserByEmail(email);
 
   if (!userWithPassword || !userWithPassword.password) {
     return null;
