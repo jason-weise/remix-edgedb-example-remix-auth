@@ -1,3 +1,5 @@
+# It's not been updated to support Edge instead of prisma
+
 # base node image
 FROM node:16-bullseye-slim as base
 

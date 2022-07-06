@@ -1,10 +1,7 @@
-import type { Password, User } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 import type { DBKey } from "~/db";
 import { client, e } from "~/db";
-
-export type { User } from "@prisma/client";
 
 export async function getUserById(id: DBKey<typeof e.User.id>) {
   const query = e.select(e.User, (user) => ({
@@ -19,7 +16,7 @@ export async function getUserById(id: DBKey<typeof e.User.id>) {
   return user;
 }
 
-export async function getUserByEmail(email: User["email"]) {
+export async function getUserByEmail(email: DBKey<typeof e.User.email>) {
   const query = e.select(e.User, (user) => ({
     ...e.User["*"],
     password: {
@@ -31,7 +28,10 @@ export async function getUserByEmail(email: User["email"]) {
   return await query.run(client);
 }
 
-export async function createUser(email: User["email"], password: string) {
+export async function createUser(
+  email: DBKey<typeof e.User.id>,
+  password: string
+) {
   const hashedPassword = await bcrypt.hash(password, 10);
 
   const query = e.insert(e.User, {
@@ -46,7 +46,7 @@ export async function createUser(email: User["email"], password: string) {
   return res;
 }
 
-export async function deleteUserByEmail(email: User["email"]) {
+export async function deleteUserByEmail(email: DBKey<typeof e.User.id>) {
   const query = e.delete(e.User, (user) => ({
     ...e.User["*"],
     password: {
@@ -59,8 +59,8 @@ export async function deleteUserByEmail(email: User["email"]) {
 }
 
 export async function verifyLogin(
-  email: User["email"],
-  password: Password["hash"]
+  email: DBKey<typeof e.User.id>,
+  password: DBKey<typeof e.Password.hash>
 ) {
   const userWithPassword = await getUserByEmail(email);
 

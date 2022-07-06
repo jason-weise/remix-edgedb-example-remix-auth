@@ -98,7 +98,7 @@ jobs:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/postgres"
 
       - name: 🛠 Setup Database
-        run: npx prisma migrate reset --force
+        run: edgedb migrate
 
       - name: ⚙️ Build
         run: npm run build

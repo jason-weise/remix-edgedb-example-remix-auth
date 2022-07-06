@@ -1,8 +1,5 @@
-import type { Note, User } from "@prisma/client";
-
 import type { DBKey } from "~/db";
 import { client, e } from "~/db";
-export type { Note } from "@prisma/client";
 
 export function getNote({
   id,
@@ -25,7 +22,11 @@ export function getNote({
     .run(client);
 }
 
-export function getNoteListItems({ userId }: { userId: User["id"] }) {
+export function getNoteListItems({
+  userId,
+}: {
+  userId: DBKey<typeof e.User.id>;
+}) {
   return e
     .select(e.Note, (note) => ({
       id: true,
@@ -40,8 +41,10 @@ export function createNote({
   body,
   title,
   userId,
-}: Pick<Note, "body" | "title"> & {
-  userId: User["id"];
+}: {
+  body: DBKey<typeof e.Note.body>;
+  title: DBKey<typeof e.Note.title>;
+  userId: DBKey<typeof e.User.id>;
 }) {
   return e
     .insert(e.Note, {
@@ -57,7 +60,10 @@ export function createNote({
 export function deleteNote({
   id,
   userId,
-}: Pick<Note, "id"> & { userId: User["id"] }) {
+}: {
+  id: DBKey<typeof e.Note.id>;
+  userId: DBKey<typeof e.User.id>;
+}) {
   return e
     .delete(e.Note, (note) => ({
       filter: e.op(
