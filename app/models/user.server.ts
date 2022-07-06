@@ -16,9 +16,6 @@ export async function getUserById(id: DBKey<typeof e.User.id>) {
 export async function getUserByEmail(email: DBKey<typeof e.User.email>) {
   const query = e.select(e.User, (user) => ({
     ...e.User["*"],
-    password: {
-      ...e.Password["*"],
-    },
     filter: e.op(user.email, "=", email),
   }));
 
@@ -65,12 +62,14 @@ export async function verifyLogin(
   const query = e.select(e.User, (user) => ({
     ...e.User["*"],
     password: {
-      ...e.Password["*"],
+      hash: true,
     },
     filter: e.op(user.email, "=", email),
   }));
 
   const userWithPassword = await query.run(client);
+
+  console.log("userWithPassword", userWithPassword);
 
   if (!userWithPassword?.password) {
     return null;

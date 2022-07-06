@@ -67,9 +67,6 @@ export default function Index() {
               >
                 Check the README.md file for instructions on how to get this
                 project deployed.
-                <br />
-                //TODO Implement Triggers to update `updated_at` when a field is
-                updated. Roadmap here: https://www.edgedb.com/roadmap#data-model
               </chakra.p>
               <chakra.div
                 mx="auto"

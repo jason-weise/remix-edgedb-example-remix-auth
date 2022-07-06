@@ -1,4 +1,4 @@
-CREATE MIGRATION m1cvgopa2b45wko34sahth56bz73wqxv4wjtsyv4new5oi6mdiyapq
+CREATE MIGRATION m1gayfqcap324eeesidoqytmbejajbxcy26euwp56t3chjq7wpg6zq
     ONTO initial
 {
   CREATE TYPE default::Note {
@@ -31,9 +31,13 @@ CREATE MIGRATION m1cvgopa2b45wko34sahth56bz73wqxv4wjtsyv4new5oi6mdiyapq
           ON TARGET DELETE  DELETE SOURCE;
           CREATE CONSTRAINT std::exclusive;
       };
+      CREATE PROPERTY retired_at -> std::datetime;
       CREATE REQUIRED PROPERTY hash -> std::str;
   };
   ALTER TYPE default::User {
-      CREATE LINK password := (.<user[IS default::Password]);
+      CREATE MULTI LINK passwords := (.<user[IS default::Password]);
+      CREATE LINK password := (std::assert_single(.passwords FILTER
+          NOT (EXISTS (.retired_at))
+      ));
   };
 };

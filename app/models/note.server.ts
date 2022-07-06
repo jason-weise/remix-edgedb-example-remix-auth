@@ -16,7 +16,6 @@ export function getNote({
         "and",
         e.op(note.id, "=", e.uuid(id))
       ),
-      limit: 1,
     }))
     .assert_single()
     .run(client);
