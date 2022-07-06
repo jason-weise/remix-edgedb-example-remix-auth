@@ -1,6 +1,6 @@
-# Chakra Remix Blues Stack
+# Chakra Remix Blues Edge Stack
 
-![The Remix Blues Stack](https://repository-images.githubusercontent.com/461012689/37d5bd8b-fa9c-4ab0-893c-f0a199d5012d)
+![The Remix Blues Edge Stack](https://repository-images.githubusercontent.com/461012689/37d5bd8b-fa9c-4ab0-893c-f0a199d5012d)
 
 Learn more about [Remix Stacks](https://remix.run/stacks).
 
@@ -8,7 +8,7 @@ Learn more about [Remix Stacks](https://remix.run/stacks).
 
 ```sh
 //install remix template
-npx create-remix --template anubra266/chakra-remix-stack-blues --no-install
+npx create-remix --template anubra266/chakra-remix-stack-blues-edge --no-install
 
 // Install dependencies with yarn
 yarn

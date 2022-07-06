@@ -54,7 +54,7 @@ export default function Index() {
                   color="blue.500"
                   dropShadow="md"
                 >
-                  Blues Stack
+                  Blues Edge Stack
                 </chakra.span>
               </Heading>
               <chakra.p
