@@ -55,6 +55,26 @@ export async function deleteUserByEmail(email: DBKey<typeof e.User.id>) {
   return await deleteMutation.run(client);
 }
 
+export async function createLoginAttempt(
+  login_successful: boolean,
+  email: string
+) {
+  const geolocate = await fetch("http://ip-api.com/json").then((res) =>
+    res.json()
+  );
+  const ip_address = geolocate.query;
+  const mutation = e.insert(e.LoginAttempt, {
+    login_successful,
+    ip_address,
+    attempted_at: new Date(),
+    user: e.select(e.User, (user) => ({
+      filter: e.op(user.email, "=", email),
+    })),
+  });
+
+  return mutation.run(client);
+}
+
 export async function verifyLogin(
   email: DBKey<typeof e.User.id>,
   password: DBKey<typeof e.Password.hash>
@@ -69,8 +89,6 @@ export async function verifyLogin(
 
   const userWithPassword = await query.run(client);
 
-  console.log("userWithPassword", userWithPassword);
-
   if (!userWithPassword?.password) {
     return null;
   }
@@ -81,9 +99,12 @@ export async function verifyLogin(
   );
 
   if (!isValid) {
+    //failed login attempt
+    await createLoginAttempt(false, email);
     return null;
   }
 
+  await createLoginAttempt(true, email);
   const { password: _password, ...userWithoutPassword } = userWithPassword;
 
   return userWithoutPassword;

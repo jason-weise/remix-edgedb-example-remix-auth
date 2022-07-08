@@ -11,6 +11,7 @@ module default {
     multi link passwords := .<user[is Password];
     link password := assert_single(.passwords filter not exists .retired_at);
     multi link notes := .<user[is Note];
+    multi link login_attempts := .<user[is LoginAttempt];
   }
 
   type Password {
@@ -20,6 +21,15 @@ module default {
       on target delete delete source;
     };
     property retired_at -> datetime;
+  }
+
+  type LoginAttempt {
+    required property ip_address -> str;
+    required property login_successful -> bool;
+    required property attempted_at -> datetime;
+     required link user -> User {
+      on target delete delete source;
+    };
   }
 
   type Note {
