@@ -1,4 +1,4 @@
-CREATE MIGRATION m1qeti775kj3ctpagety2zzcax3dzlj7l7upv3n7riavq3wn53lvzq
+CREATE MIGRATION m1c733tyhi77upkf7zsadwch62finyz3rujogp2p5ux5mdsvjfbvxq
     ONTO initial
 {
   CREATE TYPE default::LoginAttempt {
@@ -57,6 +57,9 @@ CREATE MIGRATION m1qeti775kj3ctpagety2zzcax3dzlj7l7upv3n7riavq3wn53lvzq
       };
       CREATE REQUIRED PROPERTY data -> std::json;
       CREATE REQUIRED PROPERTY expires -> std::datetime;
+      CREATE REQUIRED PROPERTY last_active -> std::datetime {
+          SET default := (std::datetime_current());
+      };
   };
   ALTER TYPE default::User {
       CREATE MULTI LINK sessions := (.<user[IS default::Session]);

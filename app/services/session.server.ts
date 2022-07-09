@@ -69,7 +69,18 @@ export const sessionStorage = createDBSessionStorage({
 
 export async function getSession(request: Request) {
   const cookie = request.headers.get("Cookie");
-  return sessionStorage.getSession(cookie);
+  const activeSession = await sessionStorage.getSession(cookie);
+  if (activeSession.id) {
+    const sessionMutation = e.update(e.Session, (session) => ({
+      filter: e.op(session.id, "=", e.uuid(activeSession.id)),
+      set: {
+        last_active: new Date(),
+      },
+    }));
+    await sessionMutation.run(client);
+  }
+
+  return activeSession;
 }
 
 export async function getUserSessions({
@@ -81,7 +92,13 @@ export async function getUserSessions({
 }) {
   const activeSession = await getSession(request);
   const sessionsQuery = e.select(e.User, (user) => ({
-    sessions: { ...e.Session["*"] },
+    sessions: (session) => ({
+      ...e.Session["*"],
+      order_by: {
+        expression: session.last_active,
+        direction: e.DESC,
+      },
+    }),
     filter: e.op(user.id, "=", e.uuid(userId)),
   }));
   const sessions = await sessionsQuery.run(client);

@@ -70,33 +70,42 @@ export default function NotesPage() {
         <chakra.div flex="1" p="6">
           <UnorderedList spacing="4">
             {data.sessions?.map((session) => {
-              const data = JSON.parse(session.data);
+              const sessionData = JSON.parse(session.data);
               return (
                 <ListItem key={session.id}>
                   <div>
-                    <b>IP:</b> {data.ip_address}
+                    <b>IP:</b> {sessionData.ip_address}
                     {session.is_current_device && (
                       <>
-                        - <b> Current session</b>
+                        - <b> Active now</b>
                       </>
                     )}
                   </div>
                   <div>
-                    <b>Browser:</b> {data.browser.name} - v
-                    {data.browser.version}{" "}
+                    <b>Browser:</b> {sessionData.browser.name} - v
+                    {sessionData.browser.version}{" "}
                   </div>
                   <div>
                     <b>Device: </b>
-                    {data.platform.vendor}, {data.platform.type} -{" "}
-                    {data.os.name}{" "}
-                    {data.os.versionName || `v` + data.os.version}
+                    {sessionData.platform.vendor}, {sessionData.platform.type} -{" "}
+                    {sessionData.os.name}{" "}
+                    {sessionData.os.versionName || `v` + sessionData.os.version}
+                  </div>
+                  <div>
+                    <b>Last active:</b>{" "}
+                    {new Intl.DateTimeFormat("en-GB", {
+                      dateStyle: "full",
+                      timeStyle: "long",
+                    }).format(new Date(session.last_active))}
                   </div>
                   <Flex gap="2">
                     {session.is_current_device ? (
                       <Form method="post">
-                        <Button type="submit" colorScheme="red" size="xs">
-                          Logout other sessions
-                        </Button>
+                        {data.sessions && data.sessions.length > 1 && (
+                          <Button type="submit" colorScheme="red" size="xs">
+                            Logout other sessions
+                          </Button>
+                        )}
                       </Form>
                     ) : (
                       <Form method="post">

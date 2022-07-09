@@ -36,6 +36,9 @@ module default {
   type Session {
     required property data -> json;
     required property expires -> datetime;
+    required property last_active -> datetime {
+        default := datetime_current();
+    }
     required link user -> User {
       on target delete delete source;
     };
