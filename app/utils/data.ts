@@ -1,7 +1,8 @@
 import { useMatches } from "@remix-run/react";
 import { useMemo } from "react";
+import type { getUser } from "~/services/session.server";
 
-import type { User } from "~/models/user.server";
+type User = NonNullable<Awaited<ReturnType<typeof getUser>>>;
 
 /**
  * This base hook is used in other hooks to quickly search for specific data

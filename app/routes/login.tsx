@@ -22,6 +22,7 @@ import { verifyLogin } from "~/models/user.server";
 import { validateEmail } from "~/utils/data";
 import { ChakraRemixLink } from "~/components/factory";
 import { inputFromForm } from "~/utils/input-resolvers";
+import { getUserAgent } from "~/utils/client";
 
 export const loader: LoaderFunction = async ({ request }) => {
   const userId = await getUserId(request);
@@ -37,9 +38,8 @@ interface ActionData {
 }
 
 export const action: ActionFunction = async ({ request }) => {
-  const { email, password, redirectTo, remember } = await inputFromForm(
-    request
-  );
+  const { email, password, redirectTo, remember, userAgent } =
+    await inputFromForm(request);
 
   if (!validateEmail(email)) {
     return json<ActionData>(
@@ -72,6 +72,7 @@ export const action: ActionFunction = async ({ request }) => {
   }
 
   return createUserSession({
+    userAgent: JSON.parse(userAgent as string),
     request,
     userId: user.id,
     remember: remember === "on" ? true : false,
@@ -100,10 +101,13 @@ export default function LoginPage() {
     }
   }, [actionData]);
 
+  const agent = getUserAgent();
+
   return (
     <Flex minH="full" direction="column" justify="center">
       <chakra.div mx="auto" w="full" maxW="md" px="8">
         <Form method="post" noValidate>
+          <input type="hidden" name="userAgent" value={JSON.stringify(agent)} />
           <Flex direction="column" gap="6">
             <FormControl
               isInvalid={actionData?.errors?.email ? true : undefined}

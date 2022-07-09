@@ -12,6 +12,7 @@ module default {
     link password := assert_single(.passwords filter not exists .retired_at);
     multi link notes := .<user[is Note];
     multi link login_attempts := .<user[is LoginAttempt];
+    multi link sessions := .<user[is Session];
   }
 
   type Password {
@@ -27,7 +28,15 @@ module default {
     required property ip_address -> str;
     required property login_successful -> bool;
     required property attempted_at -> datetime;
-     required link user -> User {
+    required link user -> User {
+      on target delete delete source;
+    };
+  }
+
+  type Session {
+    required property data -> json;
+    required property expires -> datetime;
+    required link user -> User {
       on target delete delete source;
     };
   }

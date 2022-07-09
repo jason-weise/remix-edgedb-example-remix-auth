@@ -45,11 +45,16 @@ export default function NotesPage() {
           <Link to=".">Notes</Link>
         </Heading>
         <p>{user.email}</p>
-        <Form action="/logout" method="post">
-          <Button type="submit" colorScheme="red" size="sm">
-            Logout
+        <Flex gap="2" align="center">
+          <Button as={Link} to="/sessions" colorScheme="green" size="sm">
+            Sessions
           </Button>
-        </Form>
+          <Form action="/logout" method="post">
+            <Button type="submit" colorScheme="red" size="sm">
+              Logout
+            </Button>
+          </Form>
+        </Flex>
       </Flex>
 
       <Flex as="main" h="full" bg="white">

@@ -1,11 +1,61 @@
-import { createCookieSessionStorage, redirect } from "@remix-run/node";
+import { createSessionStorage, redirect } from "@remix-run/node";
 import invariant from "tiny-invariant";
+import type Bowser from "bowser";
+import assert from "assert";
 
-import { getUserById } from "~/models/user.server";
+import type { DBKey } from "~/db";
+import { client, e } from "~/db";
+import { getUserById, getUserIp } from "~/models/user.server";
 
 invariant(process.env.SESSION_SECRET, "SESSION_SECRET must be set");
 
-export const sessionStorage = createCookieSessionStorage({
+export function createDBSessionStorage<T>({ cookie }: { cookie: T }) {
+  return createSessionStorage({
+    cookie,
+    async createData({ userId, data }, expires) {
+      assert(expires, "Expire date must be available");
+
+      const userQuery = e.select(e.User, (user) => ({
+        filter: e.op(user.id, "=", e.uuid(userId)),
+      }));
+      const sessionMutation = e.insert(e.Session, {
+        expires,
+        data: e.json(data),
+        user: userQuery,
+      });
+      const session = await sessionMutation.run(client);
+      return session.id;
+    },
+    async readData(id) {
+      const sessionQuery = e
+        .select(e.Session, (session) => ({
+          ...e.Session["*"],
+          filter: e.op(session.id, "=", e.uuid(id)),
+        }))
+        .assert_single();
+      const session = await sessionQuery.run(client);
+      return session;
+    },
+    async updateData(id, { data }, expires) {
+      const sessionMutation = e.update(e.Session, (session) => ({
+        filter: e.op(session.id, "=", e.uuid(id)),
+        set: {
+          expires,
+          data: e.json(data),
+        },
+      }));
+      await sessionMutation.run(client);
+    },
+    async deleteData(id) {
+      const sessionQuery = e.delete(e.Session, (session) => ({
+        filter: e.op(session.id, "=", e.uuid(id)),
+      }));
+      await sessionQuery.run(client);
+    },
+  });
+}
+
+export const sessionStorage = createDBSessionStorage({
   cookie: {
     name: "__session",
     httpOnly: true,
@@ -17,17 +67,47 @@ export const sessionStorage = createCookieSessionStorage({
   },
 });
 
-const USER_SESSION_KEY = "userId";
-
 export async function getSession(request: Request) {
   const cookie = request.headers.get("Cookie");
   return sessionStorage.getSession(cookie);
 }
 
+export async function getUserSessions({
+  userId,
+  request,
+}: {
+  userId: DBKey<typeof e.User.id>;
+  request: Request;
+}) {
+  const activeSession = await getSession(request);
+  const sessionsQuery = e.select(e.User, (user) => ({
+    sessions: { ...e.Session["*"] },
+    filter: e.op(user.id, "=", e.uuid(userId)),
+  }));
+  const sessions = await sessionsQuery.run(client);
+  return sessions?.sessions.map((session) => ({
+    ...session,
+    is_current_device: session.id === activeSession.id,
+  }));
+}
+
 export async function getUserId(request: Request): Promise<string | undefined> {
-  const session = await getSession(request);
-  const userId = session.get(USER_SESSION_KEY);
-  return userId;
+  const sessionCookie = await getSession(request);
+
+  if (!sessionCookie.id) return;
+
+  const sessionQuery = e.select(e.Session, (ses) => ({
+    ...e.Session["*"],
+    user: {
+      ...e.User["*"],
+    },
+    filter: e.op(ses.id, "=", e.uuid(sessionCookie.id)),
+  }));
+  const session = await sessionQuery.run(client);
+  if (!session) {
+    throw await logout(request);
+  }
+  return session?.user.id;
 }
 
 export async function getUser(request: Request) {
@@ -62,18 +142,26 @@ export async function requireUser(request: Request) {
 }
 
 export async function createUserSession({
+  userAgent,
   request,
   userId,
   remember,
   redirectTo,
 }: {
+  userAgent: Bowser.Parser.ParsedResult;
   request: Request;
   userId: string;
   remember: boolean;
   redirectTo: string;
 }) {
   const session = await getSession(request);
-  session.set(USER_SESSION_KEY, userId);
+  session.set("userId", userId);
+  const ip_address = await getUserIp();
+  const userData = {
+    ip_address,
+    ...userAgent,
+  };
+  session.set("data", userData);
   return redirect(redirectTo, {
     headers: {
       "Set-Cookie": await sessionStorage.commitSession(session, {
@@ -92,4 +180,19 @@ export async function logout(request: Request) {
       "Set-Cookie": await sessionStorage.destroySession(session),
     },
   });
+}
+
+export async function logoutSession(id: string) {
+  const sessionQuery = e.delete(e.Session, (session) => ({
+    filter: e.op(session.id, "=", e.uuid(id)),
+  }));
+  return await sessionQuery.run(client);
+}
+
+export async function logoutOtherSessions(request: Request) {
+  const activeSession = await getSession(request);
+  const sessionQuery = e.delete(e.Session, (session) => ({
+    filter: e.op(session.id, "!=", e.uuid(activeSession.id)),
+  }));
+  return await sessionQuery.run(client);
 }

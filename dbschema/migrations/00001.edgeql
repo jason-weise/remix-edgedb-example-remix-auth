@@ -1,4 +1,4 @@
-CREATE MIGRATION m1apiqshj3ber2gao2x2qaxazcnmi7afsrqdvfmkn7dot3fckurf6q
+CREATE MIGRATION m1qeti775kj3ctpagety2zzcax3dzlj7l7upv3n7riavq3wn53lvzq
     ONTO initial
 {
   CREATE TYPE default::LoginAttempt {
@@ -50,5 +50,15 @@ CREATE MIGRATION m1apiqshj3ber2gao2x2qaxazcnmi7afsrqdvfmkn7dot3fckurf6q
       CREATE LINK password := (std::assert_single(.passwords FILTER
           NOT (EXISTS (.retired_at))
       ));
+  };
+  CREATE TYPE default::Session {
+      CREATE REQUIRED LINK user -> default::User {
+          ON TARGET DELETE  DELETE SOURCE;
+      };
+      CREATE REQUIRED PROPERTY data -> std::json;
+      CREATE REQUIRED PROPERTY expires -> std::datetime;
+  };
+  ALTER TYPE default::User {
+      CREATE MULTI LINK sessions := (.<user[IS default::Session]);
   };
 };

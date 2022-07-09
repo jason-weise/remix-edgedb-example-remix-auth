@@ -55,14 +55,20 @@ export async function deleteUserByEmail(email: DBKey<typeof e.User.id>) {
   return await deleteMutation.run(client);
 }
 
-export async function createLoginAttempt(
-  login_successful: boolean,
-  email: string
-) {
+export async function getUserIp() {
   const geolocate = await fetch("http://ip-api.com/json").then((res) =>
     res.json()
   );
   const ip_address = geolocate.query;
+  return ip_address;
+}
+
+export async function createLoginAttempt(
+  login_successful: boolean,
+  email: string
+) {
+  const ip_address = await getUserIp();
+
   const mutation = e.insert(e.LoginAttempt, {
     login_successful,
     ip_address,
