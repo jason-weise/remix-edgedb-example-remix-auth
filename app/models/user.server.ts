@@ -3,9 +3,19 @@ import bcrypt from "bcryptjs";
 import type { DBKey } from "~/db";
 import { client, e } from "~/db";
 
+const userQueryOpts = {
+  ...e.User["*"],
+  memberships: () => ({
+    ...e.Membership["*"],
+    organization: {
+      ...e.Organization["*"],
+    },
+  }),
+};
+
 export async function getUserById(id: DBKey<typeof e.User.id>) {
   const query = e.select(e.User, (user) => ({
-    ...e.User["*"],
+    ...userQueryOpts,
     filter: e.op(user.id, "=", e.uuid(id)),
   }));
 
@@ -15,7 +25,7 @@ export async function getUserById(id: DBKey<typeof e.User.id>) {
 
 export async function getUserByEmail(email: DBKey<typeof e.User.email>) {
   const query = e.select(e.User, (user) => ({
-    ...e.User["*"],
+    ...userQueryOpts,
     filter: e.op(user.email, "=", email),
   }));
 
@@ -43,6 +53,20 @@ export async function createUser(
       user: { ...e.User["*"] },
     }))
     .run(client);
+
+  const organizationMutation = e.insert(e.Organization, {
+    name: "Default Organization",
+  });
+
+  const membershipMutation = e.insert(e.Membership, {
+    role: e.MembershipRole.ADMIN,
+    organization: organizationMutation,
+    user: e.select(e.User, (user) => ({
+      filter: e.op(user.id, "=", e.uuid(createdUser.user.id)),
+    })),
+  });
+
+  await membershipMutation.run(client);
 
   return createdUser.user;
 }

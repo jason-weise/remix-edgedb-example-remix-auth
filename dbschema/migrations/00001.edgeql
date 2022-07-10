@@ -1,4 +1,4 @@
-CREATE MIGRATION m1c733tyhi77upkf7zsadwch62finyz3rujogp2p5ux5mdsvjfbvxq
+CREATE MIGRATION m1bevdmnousz64klopfh6yikp5lmm4l2gxa4cm4paz3medyd6b57aq
     ONTO initial
 {
   CREATE TYPE default::LoginAttempt {
@@ -22,6 +22,52 @@ CREATE MIGRATION m1c733tyhi77upkf7zsadwch62finyz3rujogp2p5ux5mdsvjfbvxq
   };
   ALTER TYPE default::User {
       CREATE MULTI LINK login_attempts := (.<user[IS default::LoginAttempt]);
+  };
+  CREATE SCALAR TYPE default::MembershipRole EXTENDING enum<ADMIN, REGULAR>;
+  CREATE TYPE default::Membership {
+      CREATE LINK user -> default::User {
+          ON TARGET DELETE  DELETE SOURCE;
+      };
+      CREATE REQUIRED PROPERTY created_at -> std::datetime {
+          SET default := (std::datetime_current());
+      };
+      CREATE PROPERTY invitedEmail -> std::str {
+          CREATE CONSTRAINT std::exclusive;
+      };
+      CREATE PROPERTY invitedName -> std::str;
+      CREATE REQUIRED PROPERTY role -> default::MembershipRole;
+      CREATE PROPERTY updated_at -> std::datetime;
+  };
+  CREATE TYPE default::Organization {
+      CREATE REQUIRED PROPERTY created_at -> std::datetime {
+          SET default := (std::datetime_current());
+      };
+      CREATE REQUIRED PROPERTY name -> std::str;
+      CREATE PROPERTY updated_at -> std::datetime;
+  };
+  ALTER TYPE default::Membership {
+      CREATE REQUIRED LINK organization -> default::Organization {
+          ON TARGET DELETE  DELETE SOURCE;
+      };
+  };
+  ALTER TYPE default::Organization {
+      CREATE MULTI LINK memberships := (.<organization[IS default::Membership]);
+  };
+  ALTER TYPE default::User {
+      CREATE MULTI LINK memberships := (.<user[IS default::Membership]);
+  };
+  CREATE TYPE default::Session {
+      CREATE REQUIRED LINK membership -> default::Membership {
+          ON TARGET DELETE  DELETE SOURCE;
+      };
+      CREATE REQUIRED LINK user -> default::User {
+          ON TARGET DELETE  DELETE SOURCE;
+      };
+      CREATE REQUIRED PROPERTY data -> std::json;
+      CREATE REQUIRED PROPERTY expires -> std::datetime;
+      CREATE REQUIRED PROPERTY last_active -> std::datetime {
+          SET default := (std::datetime_current());
+      };
   };
   CREATE TYPE default::Note {
       CREATE REQUIRED LINK user -> default::User {
@@ -50,18 +96,6 @@ CREATE MIGRATION m1c733tyhi77upkf7zsadwch62finyz3rujogp2p5ux5mdsvjfbvxq
       CREATE LINK password := (std::assert_single(.passwords FILTER
           NOT (EXISTS (.retired_at))
       ));
-  };
-  CREATE TYPE default::Session {
-      CREATE REQUIRED LINK user -> default::User {
-          ON TARGET DELETE  DELETE SOURCE;
-      };
-      CREATE REQUIRED PROPERTY data -> std::json;
-      CREATE REQUIRED PROPERTY expires -> std::datetime;
-      CREATE REQUIRED PROPERTY last_active -> std::datetime {
-          SET default := (std::datetime_current());
-      };
-  };
-  ALTER TYPE default::User {
       CREATE MULTI LINK sessions := (.<user[IS default::Session]);
   };
 };

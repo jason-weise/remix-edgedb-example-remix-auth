@@ -6,51 +6,86 @@ import assert from "assert";
 import type { DBKey } from "~/db";
 import { client, e } from "~/db";
 import { getUserById, getUserIp } from "~/models/user.server";
+import { getActiveMembershipId } from "~/models/membership.server";
 
 invariant(process.env.SESSION_SECRET, "SESSION_SECRET must be set");
 
+const USER_SESSION_KEY = "userId";
+
+const deleteSession = e.params(
+  {
+    id: e.uuid,
+  },
+  (params) => {
+    return e.delete(e.Session, (session) => ({
+      filter: e.op(session.id, "=", params.id),
+    }));
+  }
+);
 export function createDBSessionStorage<T>({ cookie }: { cookie: T }) {
   return createSessionStorage({
     cookie,
+
     async createData({ userId, data }, expires) {
       assert(expires, "Expire date must be available");
-
       const userQuery = e.select(e.User, (user) => ({
         filter: e.op(user.id, "=", e.uuid(userId)),
       }));
+      assert(expires, "Expire date must be available");
+
+      const activeMembershipId = await getActiveMembershipId(userId);
+      assert(activeMembershipId, "User has nor organizations");
+
+      const membershipQuery = e.select(e.Membership, (membership) => ({
+        filter: e.op(membership.id, "=", e.uuid(activeMembershipId)),
+      }));
+
       const sessionMutation = e.insert(e.Session, {
         expires,
         data: e.json(data),
         user: userQuery,
+        membership: membershipQuery,
       });
+
       const session = await sessionMutation.run(client);
       return session.id;
     },
+
     async readData(id) {
       const sessionQuery = e
         .select(e.Session, (session) => ({
           ...e.Session["*"],
+          membership: {
+            ...e.Membership["*"],
+          },
           filter: e.op(session.id, "=", e.uuid(id)),
         }))
         .assert_single();
       const session = await sessionQuery.run(client);
       return session;
     },
-    async updateData(id, { data }, expires) {
+
+    async updateData(id, payload, expires) {
+      const { membershipId, membership: prevMembership } = payload;
+
+      const membershipQuery = e.select(e.Membership, (membership) => ({
+        filter: e.op(
+          membership.id,
+          "=",
+          e.uuid(membershipId || prevMembership.id)
+        ),
+      }));
       const sessionMutation = e.update(e.Session, (session) => ({
         filter: e.op(session.id, "=", e.uuid(id)),
         set: {
           expires,
-          data: e.json(data),
+          membership: membershipQuery,
         },
       }));
       await sessionMutation.run(client);
     },
     async deleteData(id) {
-      const sessionQuery = e.delete(e.Session, (session) => ({
-        filter: e.op(session.id, "=", e.uuid(id)),
-      }));
-      await sessionQuery.run(client);
+      await deleteSession.run(client, { id });
     },
   });
 }
@@ -91,9 +126,11 @@ export async function getUserSessions({
   request: Request;
 }) {
   const activeSession = await getSession(request);
+
   const sessionsQuery = e.select(e.User, (user) => ({
     sessions: (session) => ({
       ...e.Session["*"],
+      // is_current_device: e.bool(e.str(session.id) === e.str(activeSession.id)),
       order_by: {
         expression: session.last_active,
         direction: e.DESC,
@@ -106,6 +143,29 @@ export async function getUserSessions({
     ...session,
     is_current_device: session.id === activeSession.id,
   }));
+}
+
+export async function getLastActiveSession({
+  userId,
+}: {
+  userId: DBKey<typeof e.User.id>;
+}) {
+  const sessionsQuery = e.select(e.User, (user) => ({
+    sessions: (session) => ({
+      ...e.Session["*"],
+      membership: {
+        id: true,
+      },
+      order_by: {
+        expression: session.last_active,
+        direction: e.DESC,
+      },
+      limit: 1,
+    }),
+    filter: e.op(user.id, "=", e.uuid(userId)),
+  }));
+  const userWithSessions = await sessionsQuery.run(client);
+  return userWithSessions?.sessions[0];
 }
 
 export async function getUserId(request: Request): Promise<string | undefined> {
@@ -172,7 +232,8 @@ export async function createUserSession({
   redirectTo: string;
 }) {
   const session = await getSession(request);
-  session.set("userId", userId);
+
+  session.set(USER_SESSION_KEY, userId);
   const ip_address = await getUserIp();
   const userData = {
     ip_address,
@@ -192,6 +253,7 @@ export async function createUserSession({
 
 export async function logout(request: Request) {
   const session = await getSession(request);
+
   return redirect("/", {
     headers: {
       "Set-Cookie": await sessionStorage.destroySession(session),
@@ -200,10 +262,7 @@ export async function logout(request: Request) {
 }
 
 export async function logoutSession(id: string) {
-  const sessionQuery = e.delete(e.Session, (session) => ({
-    filter: e.op(session.id, "=", e.uuid(id)),
-  }));
-  return await sessionQuery.run(client);
+  return await deleteSession.run(client, { id });
 }
 
 export async function logoutOtherSessions(request: Request) {

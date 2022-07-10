@@ -16,6 +16,7 @@ import React, { useContext, useEffect } from "react";
 import { withEmotionCache } from "@emotion/react";
 import { ChakraProvider } from "@chakra-ui/react";
 
+import { getActiveMembership } from "~/models/membership.server";
 import theme from "./theme";
 import { ClientStyleContext, ServerStyleContext } from "./context";
 import { getUser } from "./services/session.server";
@@ -36,11 +37,15 @@ export const meta: MetaFunction = () => ({
 
 type LoaderData = {
   user: Awaited<ReturnType<typeof getUser>>;
+  activeMembership: Awaited<ReturnType<typeof getActiveMembership>>;
 };
 
 export const loader: LoaderFunction = async ({ request }) => {
+  const user = await getUser(request);
+  const activeMembership = await getActiveMembership(user?.id);
   return json<LoaderData>({
-    user: await getUser(request),
+    user,
+    activeMembership,
   });
 };
 

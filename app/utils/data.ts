@@ -1,5 +1,6 @@
 import { useMatches } from "@remix-run/react";
 import { useMemo } from "react";
+import type { getActiveMembership } from "~/models/membership.server";
 import type { getUser } from "~/services/session.server";
 
 type User = NonNullable<Awaited<ReturnType<typeof getUser>>>;
@@ -41,6 +42,16 @@ export function useUser(): User {
     );
   }
   return maybeUser;
+}
+
+export function useActiveMembership() {
+  const data = useMatchesData("root");
+  if (!data) {
+    return;
+  }
+  return data.activeMembership as Awaited<
+    ReturnType<typeof getActiveMembership>
+  >;
 }
 
 export function validateEmail(email: unknown): email is string {

@@ -1,4 +1,4 @@
-import type { LoaderFunction } from "@remix-run/node";
+import type { ActionFunction, LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Form, Link, NavLink, Outlet, useLoaderData } from "@remix-run/react";
 
@@ -13,12 +13,21 @@ import {
   chakra,
 } from "@chakra-ui/react";
 import { requireUserId } from "~/services/session.server";
-import { useUser } from "~/utils/data";
+import { useActiveMembership, useUser } from "~/utils/data";
 import { getNoteListItems } from "~/models/note.server";
 import { ChakraRemixLink } from "~/components/factory";
+import { inputFromForm } from "~/utils/input-resolvers";
+import { switchMembership } from "~/models/membership.server";
 
 type LoaderData = {
   noteListItems: Awaited<ReturnType<typeof getNoteListItems>>;
+};
+
+export const action: ActionFunction = async ({ request }) => {
+  const { membershipId } = await inputFromForm(request);
+
+  //* When you have a list of organizations, use this to switch organization in session
+  return await switchMembership(request, membershipId as string | undefined);
 };
 
 export const loader: LoaderFunction = async ({ request }) => {
@@ -30,6 +39,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 export default function NotesPage() {
   const data = useLoaderData() as LoaderData;
   const user = useUser();
+  const activeMembership = useActiveMembership();
 
   return (
     <Flex h="full" minH="screenY" direction="column">
@@ -46,6 +56,9 @@ export default function NotesPage() {
         </Heading>
         <p>{user.email}</p>
         <Flex gap="2" align="center">
+          <chakra.span fontWeight="bold">
+            {activeMembership?.organization.name}
+          </chakra.span>
           <Button as={Link} to="/sessions" colorScheme="green" size="sm">
             Sessions
           </Button>
