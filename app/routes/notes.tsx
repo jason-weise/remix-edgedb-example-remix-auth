@@ -1,4 +1,4 @@
-import type { ActionFunction, LoaderFunction } from "@remix-run/node";
+import type { ActionArgs, LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Form, Link, NavLink, Outlet, useLoaderData } from "@remix-run/react";
 
@@ -19,25 +19,21 @@ import { ChakraRemixLink } from "~/components/factory";
 import { inputFromForm } from "~/utils/input-resolvers";
 import { switchMembership } from "~/models/membership.server";
 
-type LoaderData = {
-  noteListItems: Awaited<ReturnType<typeof getNoteListItems>>;
-};
-
-export const action: ActionFunction = async ({ request }) => {
+export const action = async ({ request }: ActionArgs) => {
   const { membershipId } = await inputFromForm(request);
 
   //* When you have a list of organizations, use this to switch organization in session
   return await switchMembership(request, membershipId as string | undefined);
 };
 
-export const loader: LoaderFunction = async ({ request }) => {
+export const loader = async ({ request }: LoaderArgs) => {
   const userId = await requireUserId(request);
   const noteListItems = await getNoteListItems({ userId });
-  return json<LoaderData>({ noteListItems });
+  return json({ noteListItems });
 };
 
 export default function NotesPage() {
-  const data = useLoaderData() as LoaderData;
+  const data = useLoaderData<typeof loader>();
   const user = useUser();
   const activeMembership = useActiveMembership();
 
