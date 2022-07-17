@@ -1,4 +1,4 @@
-import type { ActionFunction, LoaderFunction } from "@remix-run/node";
+import type { ActionFunction, LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Form, Link, useLoaderData } from "@remix-run/react";
 
@@ -19,25 +19,23 @@ import {
 import { useUser } from "~/utils/data";
 import { inputFromForm } from "~/utils/input-resolvers";
 
-type LoaderData = {
-  sessions: Awaited<ReturnType<typeof getUserSessions>>;
-};
-
 export const action: ActionFunction = async ({ request }) => {
-  const { sessionId } = await inputFromForm(request);
-  if (sessionId) {
+  const { _action, sessionId } = await inputFromForm(request);
+  if (_action === "single_session") {
     return await logoutSession(sessionId as string);
   }
-  return logoutOtherSessions(request);
+  if (_action === "all_sessions") {
+    return logoutOtherSessions(request);
+  }
 };
-export const loader: LoaderFunction = async ({ request }) => {
+export const loader = async ({ request }: LoaderArgs) => {
   const userId = await requireUserId(request);
   const sessions = await getUserSessions({ userId, request });
-  return json<LoaderData>({ sessions });
+  return json({ sessions });
 };
 
 export default function NotesPage() {
-  const data = useLoaderData() as LoaderData;
+  const data = useLoaderData<typeof loader>();
   const user = useUser();
 
   return (
@@ -102,7 +100,13 @@ export default function NotesPage() {
                     {session.is_current_device ? (
                       <Form method="post">
                         {data.sessions && data.sessions.length > 1 && (
-                          <Button type="submit" colorScheme="red" size="xs">
+                          <Button
+                            colorScheme="red"
+                            size="xs"
+                            type="submit"
+                            name="_action"
+                            value="all_sessions"
+                          >
                             Logout other sessions
                           </Button>
                         )}
@@ -114,7 +118,13 @@ export default function NotesPage() {
                           name="sessionId"
                           value={session.id}
                         />
-                        <Button type="submit" colorScheme="orange" size="xs">
+                        <Button
+                          colorScheme="orange"
+                          size="xs"
+                          type="submit"
+                          name="_action"
+                          value="single_session"
+                        >
                           Logout
                         </Button>
                       </Form>
