@@ -1,12 +1,5 @@
 import type { ActionFunction, LoaderArgs } from "@remix-run/node";
-import { json } from "@remix-run/node";
-import {
-  Form,
-  Link,
-  useFetcher,
-  useLoaderData,
-  useTransition,
-} from "@remix-run/react";
+import { Form, Link, useFetcher, useTransition } from "@remix-run/react";
 
 import {
   Button,
@@ -24,6 +17,7 @@ import {
 } from "~/services/session.server";
 import { useUser } from "~/utils/data";
 import { inputFromForm } from "~/utils/input-resolvers";
+import { superjson, useSuperLoaderData } from "~/utils/remix";
 
 export const action: ActionFunction = async ({ request }) => {
   const { _action, sessionId } = await inputFromForm(request);
@@ -34,14 +28,16 @@ export const action: ActionFunction = async ({ request }) => {
     return logoutOtherSessions(request);
   }
 };
+
 export const loader = async ({ request }: LoaderArgs) => {
   const userId = await requireUserId(request);
   const sessions = await getUserSessions({ userId, request });
-  return json({ sessions });
+  return superjson({ sessions }, { headers: { "x-superjson": "true" } });
 };
 
 export default function NotesPage() {
-  const data = useLoaderData<typeof loader>();
+  // const data = useLoaderData<typeof loader>();
+  const data = useSuperLoaderData<typeof loader>();
   const user = useUser();
   const transition = useTransition();
   const loggingOut =
@@ -90,7 +86,7 @@ export default function NotesPage() {
             {data.sessions?.map((session, i) => (
               <SessionItem
                 session={session}
-                canLogoutAll={data.sessions && data.sessions.length > 1}
+                canLogoutAll={!!data.sessions && data.sessions.length > 1}
                 isDeletingAllSessions={isDeletingAllSessions}
                 key={i}
               />
@@ -149,7 +145,7 @@ const SessionItem = ({
         {new Intl.DateTimeFormat("en-GB", {
           dateStyle: "full",
           timeStyle: "long",
-        }).format(new Date(session.last_active))}
+        }).format(session.last_active)}
       </div>
       <Flex gap="2">
         {session.is_current_device ? (
