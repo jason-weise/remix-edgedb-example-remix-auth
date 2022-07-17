@@ -1,6 +1,12 @@
 import type { ActionFunction, LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { Form, Link, useLoaderData } from "@remix-run/react";
+import {
+  Form,
+  Link,
+  useFetcher,
+  useLoaderData,
+  useTransition,
+} from "@remix-run/react";
 
 import {
   Button,
@@ -37,6 +43,13 @@ export const loader = async ({ request }: LoaderArgs) => {
 export default function NotesPage() {
   const data = useLoaderData<typeof loader>();
   const user = useUser();
+  const transition = useTransition();
+  const loggingOut =
+    transition.submission &&
+    transition.submission.formData.get("_action") === "logout";
+
+  const isDeletingAllSessions =
+    transition.submission?.formData.get("_action") === "all_sessions";
 
   return (
     <Flex h="full" minH="screenY" direction="column">
@@ -57,7 +70,14 @@ export default function NotesPage() {
             Sessions
           </Button>
           <Form action="/logout" method="post">
-            <Button type="submit" colorScheme="red" size="sm">
+            <Button
+              colorScheme="red"
+              size="sm"
+              type="submit"
+              name="_action"
+              value="logout"
+              isLoading={loggingOut}
+            >
               Logout
             </Button>
           </Form>
@@ -67,75 +87,100 @@ export default function NotesPage() {
       <Flex as="main" h="full" bg="white">
         <chakra.div flex="1" p="6">
           <UnorderedList spacing="4">
-            {data.sessions?.map((session) => {
-              const sessionData = JSON.parse(session.data);
-              return (
-                <ListItem key={session.id}>
-                  <div>
-                    <b>IP:</b> {sessionData.ip_address}
-                    {session.is_current_device && (
-                      <>
-                        - <b> Active now</b>
-                      </>
-                    )}
-                  </div>
-                  <div>
-                    <b>Browser:</b> {sessionData.browser.name} - v
-                    {sessionData.browser.version}{" "}
-                  </div>
-                  <div>
-                    <b>Device: </b>
-                    {sessionData.platform.vendor}, {sessionData.platform.type} -{" "}
-                    {sessionData.os.name}{" "}
-                    {sessionData.os.versionName || `v` + sessionData.os.version}
-                  </div>
-                  <div>
-                    <b>Last active:</b>{" "}
-                    {new Intl.DateTimeFormat("en-GB", {
-                      dateStyle: "full",
-                      timeStyle: "long",
-                    }).format(new Date(session.last_active))}
-                  </div>
-                  <Flex gap="2">
-                    {session.is_current_device ? (
-                      <Form method="post">
-                        {data.sessions && data.sessions.length > 1 && (
-                          <Button
-                            colorScheme="red"
-                            size="xs"
-                            type="submit"
-                            name="_action"
-                            value="all_sessions"
-                          >
-                            Logout other sessions
-                          </Button>
-                        )}
-                      </Form>
-                    ) : (
-                      <Form method="post">
-                        <input
-                          type="hidden"
-                          name="sessionId"
-                          value={session.id}
-                        />
-                        <Button
-                          colorScheme="orange"
-                          size="xs"
-                          type="submit"
-                          name="_action"
-                          value="single_session"
-                        >
-                          Logout
-                        </Button>
-                      </Form>
-                    )}
-                  </Flex>
-                </ListItem>
-              );
-            })}
+            {data.sessions?.map((session, i) => (
+              <SessionItem
+                session={session}
+                canLogoutAll={data.sessions && data.sessions.length > 1}
+                isDeletingAllSessions={isDeletingAllSessions}
+                key={i}
+              />
+            ))}
           </UnorderedList>
         </chakra.div>
       </Flex>
     </Flex>
   );
 }
+
+const SessionItem = ({
+  session,
+  canLogoutAll,
+  isDeletingAllSessions,
+}: {
+  session: NonNullable<Awaited<ReturnType<typeof getUserSessions>>>[number];
+  canLogoutAll: boolean;
+  isDeletingAllSessions: boolean;
+}) => {
+  const sessionData = JSON.parse(session.data);
+
+  const singleSessionFetcher = useFetcher();
+  const isDeletingSingleSession =
+    singleSessionFetcher.submission?.formData.get("sessionId") === session.id;
+
+  return (
+    <ListItem
+      key={session.id}
+      //* Optimistic UI
+      hidden={
+        isDeletingSingleSession ||
+        (!session.is_current_device && isDeletingAllSessions)
+      }
+    >
+      <div>
+        <b>IP:</b> {sessionData.ip_address}
+        {session.is_current_device && (
+          <>
+            - <b> Active now</b>
+          </>
+        )}
+      </div>
+      <div>
+        <b>Browser:</b> {sessionData.browser.name} - v
+        {sessionData.browser.version}{" "}
+      </div>
+      <div>
+        <b>Device: </b>
+        {sessionData.platform.vendor}, {sessionData.platform.type} -{" "}
+        {sessionData.os.name}{" "}
+        {sessionData.os.versionName || `v` + sessionData.os.version}
+      </div>
+      <div>
+        <b>Last active:</b>{" "}
+        {new Intl.DateTimeFormat("en-GB", {
+          dateStyle: "full",
+          timeStyle: "long",
+        }).format(new Date(session.last_active))}
+      </div>
+      <Flex gap="2">
+        {session.is_current_device ? (
+          <Form method="post">
+            {canLogoutAll && !isDeletingAllSessions && (
+              <Button
+                colorScheme="red"
+                size="xs"
+                type="submit"
+                name="_action"
+                value="all_sessions"
+              >
+                Logout other sessions
+              </Button>
+            )}
+          </Form>
+        ) : (
+          <singleSessionFetcher.Form method="post">
+            <input type="hidden" name="sessionId" value={session.id} />
+            <Button
+              colorScheme="orange"
+              size="xs"
+              type="submit"
+              name="_action"
+              value="single_session"
+            >
+              Logout
+            </Button>
+          </singleSessionFetcher.Form>
+        )}
+      </Flex>
+    </ListItem>
+  );
+};

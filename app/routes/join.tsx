@@ -1,6 +1,11 @@
 import type { ActionArgs, LoaderArgs, MetaFunction } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { Form, useActionData, useSearchParams } from "@remix-run/react";
+import {
+  Form,
+  useActionData,
+  useSearchParams,
+  useTransition,
+} from "@remix-run/react";
 import * as React from "react";
 
 import {
@@ -89,6 +94,9 @@ export default function Join() {
   const emailRef = React.useRef<HTMLInputElement>(null);
   const passwordRef = React.useRef<HTMLInputElement>(null);
 
+  const transition = useTransition();
+  const isLoading = !!transition.submission;
+
   React.useEffect(() => {
     if (actionData?.errors?.email) {
       emailRef.current?.focus();
@@ -154,7 +162,7 @@ export default function Join() {
             </FormControl>
 
             <input type="hidden" name="redirectTo" value={redirectTo} />
-            <Button type="submit" colorScheme="blue">
+            <Button type="submit" colorScheme="blue" isLoading={isLoading}>
               Create Account
             </Button>
             <chakra.div textAlign="center" fontSize="sm" color="gray.500">

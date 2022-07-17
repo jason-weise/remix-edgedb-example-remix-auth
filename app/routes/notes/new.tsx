@@ -6,37 +6,30 @@ import {
   Input,
   Textarea,
 } from "@chakra-ui/react";
-import type { ActionFunction } from "@remix-run/node";
+import type { ActionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { Form, useActionData } from "@remix-run/react";
+import { Form, useActionData, useTransition } from "@remix-run/react";
 import * as React from "react";
 
 import { createNote } from "~/models/note.server";
 import { requireUserId } from "~/services/session.server";
 import { inputFromForm } from "~/utils/input-resolvers";
 
-type ActionData = {
-  errors?: {
-    title?: string;
-    body?: string;
-  };
-};
-
-export const action: ActionFunction = async ({ request }) => {
+export const action = async ({ request }: ActionArgs) => {
   const userId = await requireUserId(request);
 
   const { title, body } = await inputFromForm(request);
 
   if (typeof title !== "string" || title.length === 0) {
-    return json<ActionData>(
-      { errors: { title: "Title is required" } },
+    return json(
+      { errors: { title: "Title is required", body: null } },
       { status: 400 }
     );
   }
 
   if (typeof body !== "string" || body.length === 0) {
-    return json<ActionData>(
-      { errors: { body: "Body is required" } },
+    return json(
+      { errors: { title: null, body: "Body is required" } },
       { status: 400 }
     );
   }
@@ -47,9 +40,12 @@ export const action: ActionFunction = async ({ request }) => {
 };
 
 export default function NewNotePage() {
-  const actionData = useActionData() as ActionData | undefined;
+  const actionData = useActionData<typeof action>();
   const titleRef = React.useRef<HTMLInputElement>(null);
   const bodyRef = React.useRef<HTMLTextAreaElement>(null);
+
+  const transition = useTransition();
+  const isSubmitting = !!transition.submission;
 
   React.useEffect(() => {
     if (actionData?.errors?.title) {
@@ -70,25 +66,16 @@ export default function NewNotePage() {
       }}
     >
       <FormControl isInvalid={actionData?.errors?.title ? true : undefined}>
-        <FormLabel className="flex w-full flex-col gap-1">
+        <FormLabel>
           <span>Title: </span>
         </FormLabel>
-        <Input
-          ref={titleRef}
-          name="title"
-          className="flex-1 rounded-md border-2 border-blue-500 px-3 text-lg leading-loose"
-        />
+        <Input ref={titleRef} name="title" />
         <FormErrorMessage>{actionData?.errors?.title}</FormErrorMessage>
       </FormControl>
 
       <FormControl isInvalid={actionData?.errors?.body ? true : undefined}>
         <FormLabel>Body</FormLabel>
-        <Textarea
-          ref={bodyRef}
-          name="body"
-          rows={8}
-          className="w-full flex-1 rounded-md border-2 border-blue-500 py-2 px-3 text-lg leading-6"
-        />
+        <Textarea ref={bodyRef} name="body" rows={8} />
         <FormErrorMessage>{actionData?.errors?.body}</FormErrorMessage>
       </FormControl>
 
@@ -96,7 +83,7 @@ export default function NewNotePage() {
         ml="auto"
         colorScheme="blue"
         type="submit"
-        className="rounded bg-blue-500  py-2 px-4 text-white hover:bg-blue-600 focus:bg-blue-400"
+        isLoading={isSubmitting}
       >
         Save
       </Button>

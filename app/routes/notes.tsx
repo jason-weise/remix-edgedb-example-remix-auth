@@ -1,6 +1,13 @@
 import type { ActionArgs, LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { Form, Link, NavLink, Outlet, useLoaderData } from "@remix-run/react";
+import {
+  Form,
+  Link,
+  NavLink,
+  Outlet,
+  useLoaderData,
+  useTransition,
+} from "@remix-run/react";
 
 import {
   Button,
@@ -36,6 +43,10 @@ export default function NotesPage() {
   const data = useLoaderData<typeof loader>();
   const user = useUser();
   const activeMembership = useActiveMembership();
+  const transition = useTransition();
+  const loggingOut =
+    transition.submission &&
+    transition.submission.formData.get("_action") === "logout";
 
   return (
     <Flex h="full" minH="screenY" direction="column">
@@ -59,7 +70,14 @@ export default function NotesPage() {
             Sessions
           </Button>
           <Form action="/logout" method="post">
-            <Button type="submit" colorScheme="red" size="sm">
+            <Button
+              colorScheme="red"
+              size="sm"
+              type="submit"
+              name="_action"
+              value="logout"
+              isLoading={loggingOut}
+            >
               Logout
             </Button>
           </Form>
