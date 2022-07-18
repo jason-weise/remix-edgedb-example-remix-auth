@@ -1,17 +1,28 @@
 import type { ActionFunction, LoaderArgs } from "@remix-run/node";
-import { Form, Link, useFetcher, useTransition } from "@remix-run/react";
+import {
+  Form,
+  Link,
+  Outlet,
+  useFetcher,
+  useNavigate,
+  useOutlet,
+  useTransition,
+} from "@remix-run/react";
 
 import {
   Button,
   Flex,
   Heading,
   ListItem,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalOverlay,
   UnorderedList,
   chakra,
 } from "@chakra-ui/react";
 import {
   getUserSessions,
-  logoutOtherSessions,
   logoutSession,
   requireUserId,
 } from "~/services/session.server";
@@ -24,9 +35,6 @@ export const action: ActionFunction = async ({ request }) => {
   if (_action === "single_session") {
     return await logoutSession(sessionId as string);
   }
-  if (_action === "all_sessions") {
-    return logoutOtherSessions(request);
-  }
 };
 
 export const loader = async ({ request }: LoaderArgs) => {
@@ -36,16 +44,12 @@ export const loader = async ({ request }: LoaderArgs) => {
 };
 
 export default function NotesPage() {
-  // const data = useLoaderData<typeof loader>();
   const data = useSuperLoaderData<typeof loader>();
   const user = useUser();
   const transition = useTransition();
   const loggingOut =
     transition.submission &&
     transition.submission.formData.get("_action") === "logout";
-
-  const isDeletingAllSessions =
-    transition.submission?.formData.get("_action") === "all_sessions";
 
   return (
     <Flex h="full" minH="screenY" direction="column">
@@ -87,7 +91,6 @@ export default function NotesPage() {
               <SessionItem
                 session={session}
                 canLogoutAll={!!data.sessions && data.sessions.length > 1}
-                isDeletingAllSessions={isDeletingAllSessions}
                 key={i}
               />
             ))}
@@ -101,11 +104,9 @@ export default function NotesPage() {
 const SessionItem = ({
   session,
   canLogoutAll,
-  isDeletingAllSessions,
 }: {
   session: NonNullable<Awaited<ReturnType<typeof getUserSessions>>>[number];
   canLogoutAll: boolean;
-  isDeletingAllSessions: boolean;
 }) => {
   const sessionData = JSON.parse(session.data);
 
@@ -117,10 +118,7 @@ const SessionItem = ({
     <ListItem
       key={session.id}
       //* Optimistic UI
-      hidden={
-        isDeletingSingleSession ||
-        (!session.is_current_device && isDeletingAllSessions)
-      }
+      hidden={isDeletingSingleSession || !session.is_current_device}
     >
       <div>
         <b>IP:</b> {sessionData.ip_address}
@@ -149,19 +147,7 @@ const SessionItem = ({
       </div>
       <Flex gap="2">
         {session.is_current_device ? (
-          <Form method="post">
-            {canLogoutAll && !isDeletingAllSessions && (
-              <Button
-                colorScheme="red"
-                size="xs"
-                type="submit"
-                name="_action"
-                value="all_sessions"
-              >
-                Logout other sessions
-              </Button>
-            )}
-          </Form>
+          <>{canLogoutAll && <LogoutAllSessions />}</>
         ) : (
           <singleSessionFetcher.Form method="post">
             <input type="hidden" name="sessionId" value={session.id} />
@@ -178,5 +164,35 @@ const SessionItem = ({
         )}
       </Flex>
     </ListItem>
+  );
+};
+
+export const LogoutAllSessions = () => {
+  const inOutlet = !!useOutlet();
+  const navigate = useNavigate();
+
+  const onClose = () => {
+    navigate("/sessions");
+  };
+
+  return (
+    <>
+      <Button as={Link} to="logout-all" colorScheme="red" size="xs">
+        Logout other sessions
+      </Button>
+      <Modal
+        isOpen={inOutlet}
+        onClose={onClose}
+        size="sm"
+        closeOnOverlayClick={false}
+      >
+        <ModalOverlay />
+        <ModalContent>
+          <ModalBody>
+            <Outlet context={{ onClose }} />
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+    </>
   );
 };

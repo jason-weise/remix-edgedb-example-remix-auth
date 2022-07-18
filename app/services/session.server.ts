@@ -1,6 +1,7 @@
 import { createSessionStorage, redirect } from "@remix-run/node";
 import invariant from "tiny-invariant";
 import type Bowser from "bowser";
+import bcrypt from "bcryptjs";
 import assert from "assert";
 
 import type { DBKey } from "~/db";
@@ -271,4 +272,24 @@ export async function logoutOtherSessions(request: Request) {
     filter: e.op(session.id, "!=", e.uuid(activeSession.id)),
   }));
   return await sessionQuery.run(client);
+}
+
+export async function verifyPassword(
+  request: Request,
+  password: DBKey<typeof e.Password.hash>
+) {
+  const userId = await requireUserId(request);
+  const query = e.select(e.User, (user) => ({
+    password: {
+      hash: true,
+    },
+    filter: e.op(user.id, "=", e.uuid(userId)),
+  }));
+  const user = await query.run(client);
+  if (!user?.password) {
+    return null;
+  }
+  const isValid = await bcrypt.compare(password, user.password.hash);
+
+  return isValid;
 }
