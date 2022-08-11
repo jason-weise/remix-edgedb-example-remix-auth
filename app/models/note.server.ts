@@ -1,12 +1,12 @@
-import type { DBKey } from "~/db";
+import type { Note, User } from "dbschema/edgeql-js";
 import { client, e } from "~/db";
 
 export function getNote({
   id,
   userId,
 }: {
-  id: DBKey<typeof e.Note.id>;
-  userId: DBKey<typeof e.User.id>;
+  id: Note["id"];
+  userId: User["id"];
 }) {
   return e
     .select(e.Note, (note) => ({
@@ -21,11 +21,7 @@ export function getNote({
     .run(client);
 }
 
-export function getNoteListItems({
-  userId,
-}: {
-  userId: DBKey<typeof e.User.id>;
-}) {
+export function getNoteListItems({ userId }: { userId: User["id"] }) {
   return e
     .select(e.Note, (note) => ({
       id: true,
@@ -41,9 +37,9 @@ export function createNote({
   title,
   userId,
 }: {
-  body: DBKey<typeof e.Note.body>;
-  title: DBKey<typeof e.Note.title>;
-  userId: DBKey<typeof e.User.id>;
+  body: Note["body"];
+  title: Note["title"];
+  userId: User["id"];
 }) {
   return e
     .insert(e.Note, {
@@ -60,8 +56,8 @@ export function deleteNote({
   id,
   userId,
 }: {
-  id: DBKey<typeof e.Note.id>;
-  userId: DBKey<typeof e.User.id>;
+  id: Note["id"];
+  userId: User["id"];
 }) {
   return e
     .delete(e.Note, (note) => ({

@@ -108,7 +108,7 @@ const SessionItem = ({
   session: NonNullable<Awaited<ReturnType<typeof getUserSessions>>>[number];
   canLogoutAll: boolean;
 }) => {
-  const sessionData = JSON.parse(session.data);
+  const sessionData = session.data as Record<string, any>;
 
   const singleSessionFetcher = useFetcher();
   const isDeletingSingleSession =

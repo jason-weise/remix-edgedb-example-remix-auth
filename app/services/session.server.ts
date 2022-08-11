@@ -27,7 +27,8 @@ export function createDBSessionStorage<T>({ cookie }: { cookie: T }) {
   return createSessionStorage({
     cookie,
 
-    async createData({ userId, data }, expires) {
+    async createData(sessionData, expires) {
+      const { userId, data } = sessionData;
       assert(expires, "Expire date must be available");
       const userQuery = e.select(e.User, (user) => ({
         filter: e.op(user.id, "=", e.uuid(userId)),
@@ -91,12 +92,15 @@ export function createDBSessionStorage<T>({ cookie }: { cookie: T }) {
   });
 }
 
+const ONE_YEAR = 1000 * 60 * 60 * 24 * 365;
+
 export const sessionStorage = createDBSessionStorage({
   cookie: {
     name: "__session",
     httpOnly: true,
     path: "/",
     sameSite: "lax",
+    expires: new Date(Date.now() + ONE_YEAR),
     secrets: [process.env.SESSION_SECRET],
     secure: process.env.NODE_ENV === "production",
   },

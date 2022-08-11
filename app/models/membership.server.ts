@@ -1,9 +1,9 @@
-import type { DBKey } from "~/db";
+import type { Membership, User } from "dbschema/edgeql-js";
 import { client, e } from "~/db";
 import { getUserById } from "~/models/user.server";
 import { getLastActiveSession, getSession } from "~/services/session.server";
 
-export async function getMembershipById(id: DBKey<typeof e.Membership.id>) {
+export async function getMembershipById(id: Membership["id"]) {
   return await e
     .select(e.Membership, (membership) => ({
       ...e.Membership["*"],
@@ -15,7 +15,7 @@ export async function getMembershipById(id: DBKey<typeof e.Membership.id>) {
     .run(client);
 }
 
-export async function getActiveMembershipId(userId?: string) {
+export async function getActiveMembershipId(userId?: User["id"]) {
   if (!userId) return;
   const lastSession = await getLastActiveSession({ userId });
   const lastActiveMembership = lastSession?.membership.id;
@@ -26,7 +26,7 @@ export async function getActiveMembershipId(userId?: string) {
   return firstMembershipId;
 }
 
-export async function getActiveMembership(userId?: string) {
+export async function getActiveMembership(userId?: User["id"]) {
   const membershipId = await getActiveMembershipId(userId);
   if (membershipId) return await getMembershipById(membershipId);
 }

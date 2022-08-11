@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
+import type { Password, User } from "dbschema/edgeql-js";
 
-import type { DBKey } from "~/db";
 import { client, e } from "~/db";
 
 const userQueryOpts = {
@@ -13,7 +13,7 @@ const userQueryOpts = {
   }),
 };
 
-export async function getUserById(id: DBKey<typeof e.User.id>) {
+export async function getUserById(id: User["id"]) {
   const query = e.select(e.User, (user) => ({
     ...userQueryOpts,
     filter: e.op(user.id, "=", e.uuid(id)),
@@ -23,7 +23,7 @@ export async function getUserById(id: DBKey<typeof e.User.id>) {
   return user;
 }
 
-export async function getUserByEmail(email: DBKey<typeof e.User.email>) {
+export async function getUserByEmail(email: User["email"]) {
   const query = e.select(e.User, (user) => ({
     ...userQueryOpts,
     filter: e.op(user.email, "=", email),
@@ -32,10 +32,7 @@ export async function getUserByEmail(email: DBKey<typeof e.User.email>) {
   return await query.run(client);
 }
 
-export async function createUser(
-  email: DBKey<typeof e.User.id>,
-  password: string
-) {
+export async function createUser(email: User["email"], password: string) {
   const hashedPassword = await bcrypt.hash(password, 10);
 
   const userMutation = e.insert(e.User, {
@@ -71,7 +68,7 @@ export async function createUser(
   return createdUser.user;
 }
 
-export async function deleteUserByEmail(email: DBKey<typeof e.User.id>) {
+export async function deleteUserByEmail(email: User["email"]) {
   const deleteMutation = e.delete(e.User, (user) => ({
     filter: e.op(user.email, "=", email),
   }));
@@ -106,8 +103,8 @@ export async function createLoginAttempt(
 }
 
 export async function verifyLogin(
-  email: DBKey<typeof e.User.id>,
-  password: DBKey<typeof e.Password.hash>
+  email: User["email"],
+  password: Password["hash"]
 ) {
   const query = e.select(e.User, (user) => ({
     ...e.User["*"],
