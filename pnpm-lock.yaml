@@ -53,8 +53,6 @@ specifiers:
   prettier: ^2.6.1
   react: ^18.0.0
   react-dom: ^18.0.0
-  remix-auth: ^3.2.2
-  remix-auth-form: ^1.1.2
   start-server-and-test: ^1.14.0
   superjson: ^1.9.1
   tiny-invariant: ^1.2.0
@@ -85,8 +83,6 @@ dependencies:
   morgan: 1.10.0
   react: 18.2.0
   react-dom: 18.2.0_react@18.2.0
-  remix-auth: 3.2.2_uic6dbnrhu4rdkef5xnkzlgsba
-  remix-auth-form: 1.1.2_uic6dbnrhu4rdkef5xnkzlgsba
   superjson: 1.9.1
   tiny-invariant: 1.2.0
 
@@ -9833,28 +9829,6 @@ packages:
       unified: 10.1.2
     dev: true
 
-  /remix-auth-form/1.1.2_uic6dbnrhu4rdkef5xnkzlgsba:
-    resolution: {integrity: sha512-sQXvmQH6aBoCAy12PcG0r6Sfg+JlMbVEeR3SlWK9R8SXp8TAGks20TO5ofL7dgw38o228eSvwSa3y0z0PDCEDw==}
-    peerDependencies:
-      '@remix-run/server-runtime': ^1.0.0
-    dependencies:
-      '@remix-run/server-runtime': 1.6.7_biqbaboplfbrettd7655fr4n2y
-      remix-auth: 3.2.2_uic6dbnrhu4rdkef5xnkzlgsba
-    transitivePeerDependencies:
-      - '@remix-run/react'
-    dev: false
-
-  /remix-auth/3.2.2_uic6dbnrhu4rdkef5xnkzlgsba:
-    resolution: {integrity: sha512-VtzkfxeXbnXilupRTZkP40aik4vFSdwwRT96mbq0UBDMqHVRfQ7h9Y51HFrTufHJZEfAdkCopedMVvm0vQYKag==}
-    peerDependencies:
-      '@remix-run/react': ^1.0.0
-      '@remix-run/server-runtime': ^1.0.0
-    dependencies:
-      '@remix-run/react': 1.6.7_biqbaboplfbrettd7655fr4n2y
-      '@remix-run/server-runtime': 1.6.7_biqbaboplfbrettd7655fr4n2y
-      uuid: 8.3.2
-    dev: false
-
   /repeat-element/1.1.4:
     resolution: {integrity: sha512-LFiNfRcSu7KK3evMyYOuCzv3L10TW7yC1G2/+StMjK8Y6Vqd2MG7r/Qjw4ghtuCOjFvlnms/iMmLqpvW/ES/WQ==}
     engines: {node: '>=0.10.0'}
@@ -11150,6 +11124,7 @@ packages:
   /uuid/8.3.2:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
     hasBin: true
+    dev: true
 
   /uvu/0.5.6:
     resolution: {integrity: sha512-+g8ENReyr8YsOc6fv/NVJs2vFdHBnBNdfE49rshrTzDWOlUx4Gq7KOS2GD8eqhy2j+Ejq29+SbKH8yjkAqXqoA==}
