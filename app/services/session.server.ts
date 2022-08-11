@@ -134,7 +134,6 @@ export async function getUserSessions({
   const sessionsQuery = e.select(e.User, (user) => ({
     sessions: (session) => ({
       ...e.Session["*"],
-      // is_current_device: e.bool(e.str(session.id) === e.str(activeSession.id)),
       order_by: {
         expression: session.last_active,
         direction: e.DESC,

@@ -17,13 +17,11 @@ import {
   Input,
   chakra,
 } from "@chakra-ui/react";
-import { createUserSession, getUserId } from "~/services/session.server";
+import { getUserId } from "~/services/session.server";
 
-import { createUser, getUserByEmail } from "~/models/user.server";
 import { ChakraRemixLink } from "~/components/factory";
-import { validateEmail } from "~/utils/data";
-import { inputFromForm } from "~/utils/input-resolvers";
 import { getUserAgent } from "~/utils/client";
+import { join } from "~/services/auth/join.server";
 
 export const loader = async ({ request }: LoaderArgs) => {
   const userId = await getUserId(request);
@@ -32,53 +30,7 @@ export const loader = async ({ request }: LoaderArgs) => {
 };
 
 export const action = async ({ request }: ActionArgs) => {
-  const { email, password, redirectTo, userAgent } = await inputFromForm(
-    request
-  );
-
-  if (!validateEmail(email)) {
-    return json(
-      { errors: { email: "Email is invalid", password: null } },
-      { status: 400 }
-    );
-  }
-
-  if (typeof password !== "string") {
-    return json(
-      { errors: { email: null, password: "Password is required" } },
-      { status: 400 }
-    );
-  }
-
-  if (password.length < 8) {
-    return json(
-      { errors: { email: null, password: "Password is too short" } },
-      { status: 400 }
-    );
-  }
-
-  const existingUser = await getUserByEmail(email);
-  if (existingUser) {
-    return json(
-      {
-        errors: {
-          email: "A user already exists with this email",
-          password: null,
-        },
-      },
-      { status: 400 }
-    );
-  }
-
-  const user = await createUser(email, password);
-
-  return createUserSession({
-    userAgent: JSON.parse(userAgent as string),
-    request,
-    userId: user.id,
-    remember: false,
-    redirectTo: typeof redirectTo === "string" ? redirectTo : "/",
-  });
+  return await join(request);
 };
 
 export const meta: MetaFunction = () => {
