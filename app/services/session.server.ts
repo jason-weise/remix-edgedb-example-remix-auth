@@ -1,17 +1,17 @@
 import { createSessionStorage, redirect } from "@remix-run/node";
 import invariant from "tiny-invariant";
-import type Bowser from "bowser";
 import bcrypt from "bcryptjs";
+import { Authenticator } from "remix-auth";
 import assert from "assert";
 
 import type { DBKey } from "~/db";
 import { client, e } from "~/db";
-import { getUserById, getUserIp } from "~/models/user.server";
+import { getUserById } from "~/models/user.server";
 import { getActiveMembershipId } from "~/models/membership.server";
+import type { User } from "dbschema/edgeql-js";
+import { formStrategy } from "~/services/auth/strategies/form.server";
 
 invariant(process.env.SESSION_SECRET, "SESSION_SECRET must be set");
-
-const USER_SESSION_KEY = "userId";
 
 const deleteSession = e.params(
   {
@@ -23,27 +23,52 @@ const deleteSession = e.params(
     }));
   }
 );
-export function createDBSessionStorage<T>({ cookie }: { cookie: T }) {
+
+export const sessionStorage = createDBSessionStorage({
+  cookie: {
+    name: "__session",
+    httpOnly: true,
+    path: "/",
+    sameSite: "lax",
+    secrets: [process.env.SESSION_SECRET],
+    secure: process.env.NODE_ENV === "production",
+  },
+});
+
+export type SessionData = {
+  userId: User["id"];
+  data: Record<string, any>;
+};
+
+export let authenticator = new Authenticator<SessionData>(sessionStorage, {
+  throwOnError: true,
+  sessionKey: "session",
+});
+
+authenticator.use(formStrategy, "form");
+
+function createDBSessionStorage<T extends Record<string, any>>({
+  cookie,
+}: {
+  cookie: T;
+}) {
   return createSessionStorage({
     cookie,
 
-    async createData(sessionData, expires) {
-      const { userId, data } = sessionData;
-      assert(expires, "Expire date must be available");
+    async createData(sessionData) {
+      const { userId, data } = sessionData.session;
       const userQuery = e.select(e.User, (user) => ({
         filter: e.op(user.id, "=", e.uuid(userId)),
       }));
-      assert(expires, "Expire date must be available");
 
       const activeMembershipId = await getActiveMembershipId(userId);
-      assert(activeMembershipId, "User has nor organizations");
+      assert(activeMembershipId, "User has no organizations");
 
       const membershipQuery = e.select(e.Membership, (membership) => ({
         filter: e.op(membership.id, "=", e.uuid(activeMembershipId)),
       }));
 
       const sessionMutation = e.insert(e.Session, {
-        expires,
         data: e.json(data),
         user: userQuery,
         membership: membershipQuery,
@@ -64,10 +89,10 @@ export function createDBSessionStorage<T>({ cookie }: { cookie: T }) {
         }))
         .assert_single();
       const session = await sessionQuery.run(client);
-      return session;
+      return { ...session, session: session?.id };
     },
 
-    async updateData(id, payload, expires) {
+    async updateData(id, payload) {
       const { membershipId, membership: prevMembership } = payload;
 
       const membershipQuery = e.select(e.Membership, (membership) => ({
@@ -80,8 +105,8 @@ export function createDBSessionStorage<T>({ cookie }: { cookie: T }) {
       const sessionMutation = e.update(e.Session, (session) => ({
         filter: e.op(session.id, "=", e.uuid(id)),
         set: {
-          expires,
           membership: membershipQuery,
+          last_active: payload.last_active,
         },
       }));
       await sessionMutation.run(client);
@@ -92,34 +117,22 @@ export function createDBSessionStorage<T>({ cookie }: { cookie: T }) {
   });
 }
 
-const ONE_YEAR = 1000 * 60 * 60 * 24 * 365;
-
-export const sessionStorage = createDBSessionStorage({
-  cookie: {
-    name: "__session",
-    httpOnly: true,
-    path: "/",
-    sameSite: "lax",
-    expires: new Date(Date.now() + ONE_YEAR),
-    secrets: [process.env.SESSION_SECRET],
-    secure: process.env.NODE_ENV === "production",
-  },
-});
-
 export async function getSession(request: Request) {
   const cookie = request.headers.get("Cookie");
   const activeSession = await sessionStorage.getSession(cookie);
-  if (activeSession.id) {
-    const sessionMutation = e.update(e.Session, (session) => ({
-      filter: e.op(session.id, "=", e.uuid(activeSession.id)),
-      set: {
-        last_active: new Date(),
-      },
-    }));
-    await sessionMutation.run(client);
+  const sessionId = activeSession.get("id");
+  if (sessionId) {
+    activeSession.set("last_active", new Date());
+    await sessionStorage.commitSession(activeSession);
   }
 
   return activeSession;
+}
+
+export async function setSession(request: Request, key: string, value: any) {
+  const session = await getSession(request);
+  session.set(key, value);
+  await sessionStorage.commitSession(session);
 }
 
 export async function getUserSessions({
@@ -221,47 +234,8 @@ export async function requireUser(request: Request) {
   throw await logout(request);
 }
 
-export async function createUserSession({
-  userAgent,
-  request,
-  userId,
-  remember,
-  redirectTo,
-}: {
-  userAgent: Bowser.Parser.ParsedResult;
-  request: Request;
-  userId: string;
-  remember: boolean;
-  redirectTo: string;
-}) {
-  const session = await getSession(request);
-
-  session.set(USER_SESSION_KEY, userId);
-  const ip_address = await getUserIp();
-  const userData = {
-    ip_address,
-    ...userAgent,
-  };
-  session.set("data", userData);
-  return redirect(redirectTo, {
-    headers: {
-      "Set-Cookie": await sessionStorage.commitSession(session, {
-        maxAge: remember
-          ? 60 * 60 * 24 * 7 // 7 days
-          : undefined,
-      }),
-    },
-  });
-}
-
 export async function logout(request: Request) {
-  const session = await getSession(request);
-
-  return redirect("/", {
-    headers: {
-      "Set-Cookie": await sessionStorage.destroySession(session),
-    },
-  });
+  await authenticator.logout(request, { redirectTo: "/" });
 }
 
 export async function logoutSession(id: string) {

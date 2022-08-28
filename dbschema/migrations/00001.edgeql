@@ -1,4 +1,4 @@
-CREATE MIGRATION m1bevdmnousz64klopfh6yikp5lmm4l2gxa4cm4paz3medyd6b57aq
+CREATE MIGRATION m1c4kywkkfoh4kvgtwk46lpwerbvrcqxaiwk3pw36e6ziheqqmkzaa
     ONTO initial
 {
   CREATE TYPE default::LoginAttempt {
@@ -17,7 +17,7 @@ CREATE MIGRATION m1bevdmnousz64klopfh6yikp5lmm4l2gxa4cm4paz3medyd6b57aq
   };
   ALTER TYPE default::LoginAttempt {
       CREATE REQUIRED LINK user -> default::User {
-          ON TARGET DELETE  DELETE SOURCE;
+          ON TARGET DELETE DELETE SOURCE;
       };
   };
   ALTER TYPE default::User {
@@ -26,7 +26,7 @@ CREATE MIGRATION m1bevdmnousz64klopfh6yikp5lmm4l2gxa4cm4paz3medyd6b57aq
   CREATE SCALAR TYPE default::MembershipRole EXTENDING enum<ADMIN, REGULAR>;
   CREATE TYPE default::Membership {
       CREATE LINK user -> default::User {
-          ON TARGET DELETE  DELETE SOURCE;
+          ON TARGET DELETE DELETE SOURCE;
       };
       CREATE REQUIRED PROPERTY created_at -> std::datetime {
           SET default := (std::datetime_current());
@@ -47,7 +47,7 @@ CREATE MIGRATION m1bevdmnousz64klopfh6yikp5lmm4l2gxa4cm4paz3medyd6b57aq
   };
   ALTER TYPE default::Membership {
       CREATE REQUIRED LINK organization -> default::Organization {
-          ON TARGET DELETE  DELETE SOURCE;
+          ON TARGET DELETE DELETE SOURCE;
       };
   };
   ALTER TYPE default::Organization {
@@ -58,20 +58,19 @@ CREATE MIGRATION m1bevdmnousz64klopfh6yikp5lmm4l2gxa4cm4paz3medyd6b57aq
   };
   CREATE TYPE default::Session {
       CREATE REQUIRED LINK membership -> default::Membership {
-          ON TARGET DELETE  DELETE SOURCE;
+          ON TARGET DELETE DELETE SOURCE;
       };
       CREATE REQUIRED LINK user -> default::User {
-          ON TARGET DELETE  DELETE SOURCE;
+          ON TARGET DELETE DELETE SOURCE;
       };
       CREATE REQUIRED PROPERTY data -> std::json;
-      CREATE REQUIRED PROPERTY expires -> std::datetime;
       CREATE REQUIRED PROPERTY last_active -> std::datetime {
           SET default := (std::datetime_current());
       };
   };
   CREATE TYPE default::Note {
       CREATE REQUIRED LINK user -> default::User {
-          ON TARGET DELETE  DELETE SOURCE;
+          ON TARGET DELETE DELETE SOURCE;
       };
       CREATE REQUIRED PROPERTY body -> std::str;
       CREATE REQUIRED PROPERTY created_at -> std::datetime {
@@ -85,7 +84,7 @@ CREATE MIGRATION m1bevdmnousz64klopfh6yikp5lmm4l2gxa4cm4paz3medyd6b57aq
   };
   CREATE TYPE default::Password {
       CREATE REQUIRED LINK user -> default::User {
-          ON TARGET DELETE  DELETE SOURCE;
+          ON TARGET DELETE DELETE SOURCE;
           CREATE CONSTRAINT std::exclusive;
       };
       CREATE PROPERTY retired_at -> std::datetime;

@@ -1,5 +1,9 @@
-import type { ActionArgs, LoaderArgs, MetaFunction } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
+import type {
+  ActionArgs,
+  LoaderArgs,
+  MetaFunction,
+  TypedResponse,
+} from "@remix-run/node";
 import {
   Form,
   useActionData,
@@ -18,15 +22,16 @@ import {
   Input,
   chakra,
 } from "@chakra-ui/react";
-import { getUserId } from "~/services/session.server";
 import { ChakraRemixLink } from "~/components/factory";
 import { getUserAgent } from "~/utils/client";
 import { login } from "~/services/auth/login.server";
+import { AuthAction } from "~/utils/constant";
+import { authenticator } from "~/services/session.server";
 
 export const loader = async ({ request }: LoaderArgs) => {
-  const userId = await getUserId(request);
-  if (userId) return redirect("/");
-  return json({});
+  return await authenticator.isAuthenticated(request, {
+    successRedirect: "/",
+  });
 };
 
 export const action = async ({ request }: ActionArgs) => {
@@ -39,10 +44,18 @@ export const meta: MetaFunction = () => {
   };
 };
 
+type ActionReturn = NonNullable<
+  Awaited<ReturnType<typeof action>>
+> extends TypedResponse<infer T>
+  ? T
+  : any;
+
 export default function LoginPage() {
   const [searchParams] = useSearchParams();
-  const redirectTo = searchParams.get("redirectTo") || "/notes";
-  const actionData = useActionData<typeof action>();
+
+  const redirectTo = searchParams.get("redirectTo") || "/";
+  const actionData = useActionData<typeof action>() as unknown as ActionReturn;
+
   const emailRef = React.useRef<HTMLInputElement>(null);
   const passwordRef = React.useRef<HTMLInputElement>(null);
 
@@ -114,7 +127,13 @@ export default function LoginPage() {
             </FormControl>
 
             <input type="hidden" name="redirectTo" value={redirectTo} />
-            <Button type="submit" colorScheme="blue" isLoading={isLoading}>
+            <Button
+              type="submit"
+              colorScheme="blue"
+              isLoading={isLoading}
+              name="_action"
+              value={AuthAction.LOGIN}
+            >
               Log in
             </Button>
             <Flex direction="column" align="center" justify="space-between">

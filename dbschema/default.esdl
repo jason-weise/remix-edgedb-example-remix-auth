@@ -67,7 +67,6 @@ scalar type MembershipRole extending enum<ADMIN, REGULAR>;
 
   type Session {
     required property data -> json;
-    required property expires -> datetime;
     required property last_active -> datetime {
        default := datetime_current();
     }

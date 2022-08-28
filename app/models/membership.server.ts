@@ -1,7 +1,7 @@
 import type { Membership, User } from "dbschema/edgeql-js";
 import { client, e } from "~/db";
 import { getUserById } from "~/models/user.server";
-import { getLastActiveSession, getSession } from "~/services/session.server";
+import { getLastActiveSession, setSession } from "~/services/session.server";
 
 export async function getMembershipById(id: Membership["id"]) {
   return await e
@@ -36,8 +36,6 @@ export async function switchMembership(
   membershipId?: string
 ) {
   if (!membershipId) return;
-  const activeSession = await getSession(request);
 
-  activeSession.set("membershipId", membershipId);
-  return await sessionStorage.commitSession(activeSession);
+  await setSession(request, "membershipId", membershipId);
 }

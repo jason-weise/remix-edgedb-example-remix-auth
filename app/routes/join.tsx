@@ -1,5 +1,9 @@
-import type { ActionArgs, LoaderArgs, MetaFunction } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
+import type {
+  ActionArgs,
+  LoaderArgs,
+  MetaFunction,
+  TypedResponse,
+} from "@remix-run/node";
 import {
   Form,
   useActionData,
@@ -17,16 +21,18 @@ import {
   Input,
   chakra,
 } from "@chakra-ui/react";
-import { getUserId } from "~/services/session.server";
 
 import { ChakraRemixLink } from "~/components/factory";
 import { getUserAgent } from "~/utils/client";
 import { join } from "~/services/auth/join.server";
+import { AuthAction } from "~/utils/constant";
+import type { SessionData } from "~/services/session.server";
+import { authenticator } from "~/services/session.server";
 
 export const loader = async ({ request }: LoaderArgs) => {
-  const userId = await getUserId(request);
-  if (userId) return redirect("/");
-  return json({});
+  return await authenticator.isAuthenticated(request, {
+    successRedirect: "/",
+  });
 };
 
 export const action = async ({ request }: ActionArgs) => {
@@ -39,10 +45,19 @@ export const meta: MetaFunction = () => {
   };
 };
 
+type ActionReturn = Exclude<
+  NonNullable<Awaited<ReturnType<typeof action>>>,
+  SessionData
+> extends TypedResponse<infer T>
+  ? T
+  : any;
+
 export default function Join() {
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") ?? undefined;
-  const actionData = useActionData<typeof action>();
+
+  const actionData = useActionData<typeof action>() as unknown as ActionReturn;
+
   const emailRef = React.useRef<HTMLInputElement>(null);
   const passwordRef = React.useRef<HTMLInputElement>(null);
 
@@ -114,7 +129,13 @@ export default function Join() {
             </FormControl>
 
             <input type="hidden" name="redirectTo" value={redirectTo} />
-            <Button type="submit" colorScheme="blue" isLoading={isLoading}>
+            <Button
+              type="submit"
+              colorScheme="blue"
+              isLoading={isLoading}
+              name="_action"
+              value={AuthAction.JOIN}
+            >
               Create Account
             </Button>
             <chakra.div textAlign="center" fontSize="sm" color="gray.500">

@@ -7,15 +7,20 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLoaderData,
 } from "@remix-run/react";
 import React, { useContext, useEffect } from "react";
 import { withEmotionCache } from "@emotion/react";
-import { ChakraProvider } from "@chakra-ui/react";
+import {
+  ChakraProvider,
+  cookieStorageManagerSSR,
+  localStorageManager,
+} from "@chakra-ui/react";
 
 import { getActiveMembership } from "~/models/membership.server";
+import { getUser } from "./services/session.server";
 import theme from "./theme";
 import { ClientStyleContext, ServerStyleContext } from "./context";
-import { getUser } from "./services/session.server";
 
 interface DocumentProps {
   children: React.ReactNode;
@@ -37,13 +42,21 @@ export const loader = async ({ request }: LoaderArgs) => {
   return json({
     user,
     activeMembership,
+    cookie: request.headers.get("cookie"),
   });
 };
 
 export default function App() {
+  const { cookie } = useLoaderData<typeof loader>();
+
+  const colorModeManager =
+    typeof cookie === "string"
+      ? cookieStorageManagerSSR(cookie)
+      : localStorageManager;
+
   return (
     <Document>
-      <ChakraProvider theme={theme}>
+      <ChakraProvider theme={theme} colorModeManager={colorModeManager}>
         <Outlet />
       </ChakraProvider>
     </Document>
@@ -67,6 +80,7 @@ const Document = withEmotionCache(
       });
       // reset cache to reapply global styles
       clientStyleData?.reset();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return (
